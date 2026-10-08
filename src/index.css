@@ -20,8 +20,16 @@ body {
 }
 
 button,
-input {
+input,
+a {
   font-family: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid #f0c27a;
+  outline-offset: 2px;
 }
 
 ::selection {

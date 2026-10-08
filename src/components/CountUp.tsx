@@ -19,7 +19,7 @@ export function CountUp({ value, reducedMotion, className }: CountUpProps) {
 
     const controls = animate(0, value, {
       duration: Math.min(1.6, 0.6 + Math.log10(Math.max(value, 1)) * 0.35),
-      ease: 'easeOut',
+      ease: [0.16, 1, 0.3, 1],
       onUpdate: (latest) => setDisplay(Math.round(latest)),
     })
 

@@ -1,14 +1,14 @@
 import type { SlideProps } from '../../types'
 import { Headline, Kicker, SlideShell } from './SlideShell'
 
-export function IntroSlide({ stats }: SlideProps) {
+export function IntroSlide({ stats, avatarSrc }: SlideProps) {
   return (
     <SlideShell
       announcement={`${stats.displayName}, your recap is ready.`}
       gradient="bg-gradient-to-br from-[#1a1033] via-[#3a1548] to-[#7a2d4a]"
     >
       <img
-        src={stats.avatarUrl}
+        src={avatarSrc}
         alt=""
         width={96}
         height={96}

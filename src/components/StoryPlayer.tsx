@@ -1,4 +1,11 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import {
+  animate,
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useTransform,
+  type MotionValue,
+} from 'framer-motion'
 import {
   useCallback,
   useEffect,
@@ -16,23 +23,31 @@ import { SLIDE_COMPONENTS, SummarySlide } from './slides'
 const SLIDE_MS = 5000
 const HOLD_MS = 200
 
-export function StoryPlayer({ recap }: { recap: RecapResult }) {
+export function StoryPlayer({
+  recap,
+  avatarSrc,
+}: {
+  recap: RecapResult
+  avatarSrc: string
+}) {
   const { stats, personality } = recap
   const slides = useMemo(() => planSlides(stats), [stats])
   const reducedMotion = usePrefersReducedMotion()
   const navigate = useNavigate()
   const [index, setIndex] = useState(0)
-  const [progress, setProgress] = useState(0)
   const [paused, setPaused] = useState(false)
-  const progressRef = useRef(0)
+  const progress = useMotionValue(0)
   const pausedRef = useRef(false)
   const holdTimerRef = useRef<number | null>(null)
   const pausedByHoldRef = useRef(false)
+  const pausedByVisibilityRef = useRef(false)
 
-  pausedRef.current = paused
+  useEffect(() => {
+    pausedRef.current = paused
+  }, [paused])
 
   const currentId: SlideId = slides[index] ?? 'intro'
-  const slideProps = { stats, personality, reducedMotion }
+  const slideProps = { stats, personality, reducedMotion, avatarSrc }
 
   const goNext = useCallback(() => {
     setIndex((current) => Math.min(slides.length - 1, current + 1))
@@ -45,50 +60,40 @@ export function StoryPlayer({ recap }: { recap: RecapResult }) {
   const replay = useCallback(() => {
     setIndex(0)
     setPaused(false)
-  }, [])
+    progress.set(0)
+  }, [progress])
 
   useEffect(() => {
-    progressRef.current = 0
-    setProgress(0)
-  }, [index])
+    progress.set(0)
+  }, [index, progress])
 
   useEffect(() => {
-    if (reducedMotion || paused) return
-
-    const remaining = (1 - progressRef.current) * SLIDE_MS
-    if (index >= slides.length - 1 && progressRef.current >= 1) return
-
-    const started = performance.now()
-    const startProgress = progressRef.current
-    let frame = 0
-
-    const tick = (now: number) => {
-      const next = Math.min(1, startProgress + (now - started) / SLIDE_MS)
-      progressRef.current = next
-      setProgress(next)
-      if (next < 1) {
-        frame = requestAnimationFrame(tick)
-      }
+    if (reducedMotion) {
+      progress.set(1)
+      return
     }
-    frame = requestAnimationFrame(tick)
+    if (paused) return
 
-    const timeout = window.setTimeout(() => {
-      if (index < slides.length - 1) {
-        setIndex((current) => current + 1)
-      } else {
-        progressRef.current = 1
-        setProgress(1)
-      }
-    }, Math.max(16, remaining))
+    const remaining = Math.max(0.05, (1 - progress.get()) * (SLIDE_MS / 1000))
+    const controls = animate(progress, 1, {
+      duration: remaining,
+      ease: 'linear',
+      onComplete: () => {
+        if (index < slides.length - 1) {
+          setIndex((current) => current + 1)
+        }
+      },
+    })
 
-    return () => {
-      cancelAnimationFrame(frame)
-      window.clearTimeout(timeout)
-    }
-  }, [index, paused, reducedMotion, slides.length])
+    return () => controls.stop()
+  }, [index, paused, reducedMotion, slides.length, progress])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const inControl = target?.closest('button, a, input, textarea')
+      if (event.key === ' ' && inControl) return
+
       if (event.key === 'ArrowRight') {
         event.preventDefault()
         goNext()
@@ -107,6 +112,25 @@ export function StoryPlayer({ recap }: { recap: RecapResult }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [goNext, goPrev, navigate])
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (!pausedRef.current) {
+          pausedByVisibilityRef.current = true
+          setPaused(true)
+        }
+        return
+      }
+      if (pausedByVisibilityRef.current) {
+        pausedByVisibilityRef.current = false
+        setPaused(false)
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
 
   const clearHoldTimer = () => {
     if (holdTimerRef.current !== null) {
@@ -167,19 +191,20 @@ export function StoryPlayer({ recap }: { recap: RecapResult }) {
       onContextMenu={(event) => event.preventDefault()}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <div className="flex gap-1">
+        <div className="flex gap-1" aria-hidden="true">
           {slides.map((id, slideIndex) => (
-            <div
+            <ProgressSegment
               key={id}
-              className="h-1 flex-1 overflow-hidden rounded-full bg-white/25"
-            >
-              <div
-                className="h-full rounded-full bg-white"
-                style={{
-                  width: barWidth(slideIndex, index, progress, reducedMotion),
-                }}
-              />
-            </div>
+              status={
+                slideIndex < index
+                  ? 'done'
+                  : slideIndex === index
+                    ? 'active'
+                    : 'idle'
+              }
+              progress={progress}
+              reducedMotion={reducedMotion}
+            />
           ))}
         </div>
       </div>
@@ -187,7 +212,7 @@ export function StoryPlayer({ recap }: { recap: RecapResult }) {
       <button
         type="button"
         onClick={() => navigate('/')}
-        className="absolute top-[max(1.75rem,calc(env(safe-area-inset-top)+1.25rem))] left-3 z-40 rounded-full bg-black/25 px-3 py-1.5 text-sm font-semibold text-white/90 backdrop-blur-sm hover:bg-black/40"
+        className="absolute top-[max(1.75rem,calc(env(safe-area-inset-top)+1.25rem))] left-3 z-40 rounded-full bg-black/25 px-3 py-1.5 text-sm font-semibold text-white/90 backdrop-blur-sm transition-transform duration-150 hover:bg-black/40 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f0c27a]"
         aria-label="Back to landing"
       >
         Close
@@ -219,14 +244,27 @@ export function StoryPlayer({ recap }: { recap: RecapResult }) {
   )
 }
 
-function barWidth(
-  slideIndex: number,
-  currentIndex: number,
-  progress: number,
-  reducedMotion: boolean,
-): string {
-  if (slideIndex < currentIndex) return '100%'
-  if (slideIndex > currentIndex) return '0%'
-  if (reducedMotion) return '100%'
-  return `${Math.round(progress * 1000) / 10}%`
+function ProgressSegment({
+  status,
+  progress,
+  reducedMotion,
+}: {
+  status: 'done' | 'active' | 'idle'
+  progress: MotionValue<number>
+  reducedMotion: boolean
+}) {
+  const scaleX = useTransform(progress, (value) => {
+    if (status === 'done' || (status === 'active' && reducedMotion)) return 1
+    if (status === 'idle') return 0
+    return value
+  })
+
+  return (
+    <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/30">
+      <motion.div
+        className="h-full w-full origin-left rounded-full bg-white"
+        style={{ scaleX }}
+      />
+    </div>
+  )
 }

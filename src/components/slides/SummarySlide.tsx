@@ -1,80 +1,163 @@
-import { formatAccountAge } from '../../lib/stats'
-import {
-  buildSnapshotTiles,
-  shouldUseSingleStatSnapshot,
-} from '../../lib/snapshot'
+import { toPng } from 'html-to-image'
+import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { recapHref, siteHost } from '../../lib/site'
 import type { SlideProps } from '../../types'
+import {
+  SHARE_CARD_HEIGHT,
+  SHARE_CARD_WIDTH,
+  ShareCard,
+} from '../ShareCard'
+import { UiButton } from '../UiButton'
 import { Kicker, SlideShell } from './SlideShell'
 
 export function SummarySlide({
   stats,
   personality,
+  avatarSrc,
   onReplay,
 }: SlideProps & { onReplay: () => void }) {
-  const tiles = buildSnapshotTiles(stats)
-  const singleStat = shouldUseSingleStatSnapshot(tiles)
-  const age = formatAccountAge(stats.accountAgeYears)
+  const navigate = useNavigate()
+  const exportRef = useRef<HTMLDivElement>(null)
+  const [busy, setBusy] = useState<'download' | 'share' | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const host = siteHost()
+
+  const showToast = (message: string) => {
+    setToast(message)
+    window.setTimeout(() => setToast(null), 2400)
+  }
+
+  const capturePng = async (): Promise<string> => {
+    const node = exportRef.current
+    if (!node) throw new Error('Share card is not ready')
+    return toPng(node, {
+      pixelRatio: 2,
+      cacheBust: true,
+      width: SHARE_CARD_WIDTH,
+      height: SHARE_CARD_HEIGHT,
+    })
+  }
+
+  const onDownload = async () => {
+    setBusy('download')
+    try {
+      const dataUrl = await capturePng()
+      const link = document.createElement('a')
+      link.download = `repo-recap-${stats.username}.png`
+      link.href = dataUrl
+      link.click()
+    } catch {
+      showToast('Could not export the image. Try again.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const onShare = async () => {
+    setBusy('share')
+    const link = recapHref(stats.username)
+    try {
+      const dataUrl = await capturePng()
+      const blob = await (await fetch(dataUrl)).blob()
+      const file = new File([blob], `repo-recap-${stats.username}.png`, {
+        type: 'image/png',
+      })
+      const payload = {
+        files: [file],
+        title: `${stats.displayName}'s Repo Recap`,
+        text: `My Repo Recap: ${link}`,
+      }
+      if (typeof navigator.canShare === 'function' && navigator.canShare(payload)) {
+        await navigator.share(payload)
+        return
+      }
+      await navigator.clipboard.writeText(link)
+      showToast('Recap link copied')
+    } catch {
+      try {
+        await navigator.clipboard.writeText(link)
+        showToast('Recap link copied')
+      } catch {
+        showToast('Could not share just now.')
+      }
+    } finally {
+      setBusy(null)
+    }
+  }
 
   return (
     <SlideShell
-      announcement={`Summary for ${stats.displayName}: ${personality.title}. ${singleStat ? `Public for ${age}.` : tiles.map((tile) => `${tile.label} ${tile.value}`).join(', ')}`}
+      announcement={`Summary for ${stats.displayName}: ${personality.title}.`}
       gradient="bg-gradient-to-br from-[#0e1018] via-[#1a2238] to-[#2a3a5c]"
     >
-      <Kicker>Snapshot</Kicker>
-      <div className="rounded-3xl border border-white/15 bg-white/10 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <img
-            src={stats.avatarUrl}
-            alt=""
-            className="h-12 w-12 rounded-2xl object-cover ring-2 ring-white/20"
-          />
-          <div>
-            <p className="font-bold">{stats.displayName}</p>
-            {!singleStat ? (
-              <p className="text-sm text-white/70">
-                {personality.emoji} {personality.title}
-              </p>
-            ) : (
-              <p className="text-sm text-white/70">@{stats.username}</p>
-            )}
-          </div>
-        </div>
-        {singleStat ? (
-          <div className="mt-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-white/55">
-              Public for
-            </p>
-            <p className="mt-1 text-5xl leading-none font-bold tracking-tight">
-              {age}
-            </p>
-            <p className="mt-4 text-lg font-semibold">
-              {personality.emoji} {personality.title}
-            </p>
-            <p className="mt-1 text-white/70">{personality.description}</p>
-          </div>
-        ) : (
-          <dl className="mt-5 grid grid-cols-2 gap-x-3 gap-y-4 text-sm">
-            {tiles.map((tile) => (
-              <div key={tile.label}>
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
-                  {tile.label}
-                </dt>
-                <dd className="mt-1 text-base font-semibold">{tile.value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        <p className="mt-5 rounded-2xl bg-black/20 px-3 py-2 text-center text-xs tracking-wide text-white/65">
-          Share & export lands on Night 2
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onReplay}
-        className="mt-6 self-start rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed top-0 left-[-2000px]"
       >
-        Replay recap
-      </button>
+        <div
+          ref={exportRef}
+          style={{ width: SHARE_CARD_WIDTH, height: SHARE_CARD_HEIGHT }}
+        >
+          <ShareCard
+            stats={stats}
+            personality={personality}
+            avatarSrc={avatarSrc}
+            siteHost={host}
+          />
+        </div>
+      </div>
+
+      <Kicker>Your card</Kicker>
+      <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[28px] shadow-[0_24px_50px_rgba(0,0,0,0.35)] ring-1 ring-white/15">
+        <div className="aspect-[4/5]">
+          <ShareCard
+            stats={stats}
+            personality={personality}
+            avatarSrc={avatarSrc}
+            siteHost={host}
+          />
+        </div>
+      </div>
+
+      <div className="mt-5 flex flex-col gap-2">
+        <UiButton onClick={() => void onDownload()} disabled={busy !== null}>
+          {busy === 'download' ? 'Preparing…' : 'Download image'}
+        </UiButton>
+        <UiButton
+          variant="secondary"
+          onClick={() => void onShare()}
+          disabled={busy !== null}
+        >
+          {busy === 'share' ? 'Sharing…' : 'Share'}
+        </UiButton>
+        <div className="flex gap-2">
+          <UiButton
+            variant="secondary"
+            className="flex-1"
+            onClick={onReplay}
+          >
+            Replay
+          </UiButton>
+          <UiButton
+            variant="secondary"
+            className="flex-1"
+            onClick={() => navigate('/')}
+          >
+            Try another username
+          </UiButton>
+        </div>
+      </div>
+
+      {toast ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-3 rounded-full bg-black/40 px-4 py-2 text-center text-sm text-white"
+        >
+          {toast}
+        </p>
+      ) : null}
     </SlideShell>
   )
 }

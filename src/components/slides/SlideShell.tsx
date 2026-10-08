@@ -31,7 +31,7 @@ export function SlideShell({ announcement, gradient, children }: SlideShellProps
 
 export function Kicker({ children }: { children: ReactNode }) {
   return (
-    <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
+    <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
       {children}
     </p>
   )

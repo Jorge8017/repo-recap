@@ -1,0 +1,79 @@
+import { expect, test, type Page } from '@playwright/test'
+import fixture from './fixtures/github.json' with { type: 'json' }
+
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+)
+
+async function mockGitHub(page: Page) {
+  await page.route('https://avatars.githubusercontent.com/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: PNG,
+    })
+  })
+
+  await page.route('https://api.github.com/**', async (route) => {
+    const url = route.request().url()
+    const headers = {
+      'x-ratelimit-remaining': '55',
+      'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+    }
+
+    if (url.includes('/repos')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers,
+        body: JSON.stringify(fixture.repos),
+      })
+      return
+    }
+
+    if (url.includes('/events/public')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers,
+        body: JSON.stringify(fixture.events),
+      })
+      return
+    }
+
+    if (/\/users\/octocat$/.test(url) || url.endsWith('/users/octocat')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers,
+        body: JSON.stringify(fixture.user),
+      })
+      return
+    }
+
+    await route.fulfill({ status: 404, body: '{}' })
+  })
+}
+
+test('plays a mocked recap through to the downloadable share card', async ({
+  page,
+}) => {
+  await mockGitHub(page)
+  await page.goto('/')
+
+  await page.getByLabel('GitHub username').fill('octocat')
+  await page.getByRole('button', { name: 'Generate recap' }).click()
+
+  await expect(
+    page.getByRole('heading', { name: /your recap is ready/i }),
+  ).toBeVisible({
+    timeout: 15_000,
+  })
+
+  for (let step = 0; step < 12; step += 1) {
+    await page.keyboard.press('ArrowRight')
+  }
+
+  await expect(page.getByRole('button', { name: 'Download image' })).toBeVisible()
+})

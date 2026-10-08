@@ -1,53 +1,13 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { formatRateLimitReset, GitHubApiError } from '../api/github'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
-
-export type RecapErrorKind = 'not_found' | 'rate_limit' | 'network'
-
-interface ErrorCopy {
-  kind: RecapErrorKind
-  eyebrow: string
-  headline: string
-  body: string
-  emoji: string
-  showRetry: boolean
-}
-
-const NOT_FOUND: ErrorCopy = {
-  kind: 'not_found',
-  eyebrow: 'User not found',
-  headline: 'Nobody by that name',
-  body: "We couldn't find that GitHub user. Check the spelling and try again.",
-  emoji: '🔍',
-  showRetry: false,
-}
-
-const NETWORK: ErrorCopy = {
-  kind: 'network',
-  eyebrow: 'Something went wrong',
-  headline: "Couldn't load the recap",
-  body: 'Check your connection and try again in a moment.',
-  emoji: '🛰️',
-  showRetry: true,
-}
-
-export function presentRecapError(error: unknown): ErrorCopy {
-  if (error instanceof GitHubApiError) {
-    if (error.code === 'not_found') return NOT_FOUND
-    if (error.code === 'rate_limit') {
-      return {
-        kind: 'rate_limit',
-        eyebrow: 'Taking a breather',
-        headline: 'Too many recaps',
-        body: `GitHub's public hourly limit is spent. It resets at ${formatRateLimitReset(error.resetAt)}.`,
-        emoji: '⏳',
-        showRetry: false,
-      }
-    }
-  }
-  return NETWORK
-}
+import {
+  NETWORK_COPY,
+  NOT_FOUND_COPY,
+  presentRecapError,
+  type RecapErrorKind,
+} from '../lib/errorCopy'
+import { UiButton } from './UiButton'
 
 interface ErrorStateProps {
   error?: unknown
@@ -59,9 +19,9 @@ export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
   const reducedMotion = usePrefersReducedMotion()
   const copy =
     kind === 'not_found'
-      ? NOT_FOUND
+      ? NOT_FOUND_COPY
       : kind === 'network'
-        ? NETWORK
+        ? NETWORK_COPY
         : presentRecapError(error)
 
   return (
@@ -81,27 +41,21 @@ export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
         </motion.span>
       </div>
       <div>
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
           {copy.eyebrow}
         </p>
         <h1 className="text-4xl leading-tight font-bold">{copy.headline}</h1>
-        <p className="mt-4 max-w-[28ch] text-lg text-white/80">{copy.body}</p>
+        <p className="mt-4 max-w-[28ch] text-lg text-white/85">{copy.body}</p>
         <div className="mt-10 flex flex-wrap gap-3">
-          {copy.showRetry && onRetry ? (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="inline-flex w-fit rounded-full bg-[#f6efe4] px-5 py-3 font-semibold text-[#1a1020]"
-            >
-              Retry
-            </button>
+          {onRetry ? (
+            <UiButton onClick={onRetry}>Retry</UiButton>
           ) : null}
           <Link
             to="/"
             className={
-              copy.showRetry && onRetry
-                ? 'inline-flex w-fit rounded-full border border-white/20 bg-white/10 px-5 py-3 font-semibold text-white'
-                : 'inline-flex w-fit rounded-full bg-[#f6efe4] px-5 py-3 font-semibold text-[#1a1020]'
+              onRetry
+                ? 'inline-flex w-fit rounded-full border border-white/25 bg-white/10 px-5 py-3 font-semibold text-white transition-transform duration-150 hover:bg-white/20 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f0c27a]'
+                : 'inline-flex w-fit rounded-full bg-[#f6efe4] px-5 py-3 font-semibold text-[#1a1020] transition-transform duration-150 hover:bg-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f0c27a]'
             }
           >
             Try another username

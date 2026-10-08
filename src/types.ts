@@ -128,6 +128,7 @@ export interface SlideProps {
   stats: RecapStats
   personality: Personality
   reducedMotion: boolean
+  avatarSrc: string
 }
 
 export type GitHubErrorCode = 'not_found' | 'rate_limit' | 'http' | 'network'
