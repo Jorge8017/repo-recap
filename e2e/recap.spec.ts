@@ -58,7 +58,9 @@ async function mockGitHub(page: Page) {
 
 test('plays a mocked recap through to the downloadable share card', async ({
   page,
+  context,
 }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await mockGitHub(page)
   await page.goto('/')
 
@@ -75,5 +77,12 @@ test('plays a mocked recap through to the downloadable share card', async ({
     await page.keyboard.press('ArrowRight')
   }
 
+  const preview = page.getByTestId('share-card-preview')
+  await expect(preview.getByText('Builder')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Download image' })).toBeVisible()
+
+  const share = page.getByRole('button', { name: 'Share' })
+  await share.click()
+  await expect(page.getByRole('button', { name: 'Share' })).toBeVisible()
+  await expect(page.getByText('Link copied')).toBeVisible()
 })

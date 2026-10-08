@@ -4,12 +4,18 @@ interface SlideShellProps {
   announcement: string
   gradient: string
   children: ReactNode
+  fill?: boolean
 }
 
-export function SlideShell({ announcement, gradient, children }: SlideShellProps) {
+export function SlideShell({
+  announcement,
+  gradient,
+  children,
+  fill = false,
+}: SlideShellProps) {
   return (
     <section
-      className={`relative flex h-full min-h-0 flex-col justify-end overflow-hidden px-7 pb-16 pt-24 ${gradient}`}
+      className={`relative flex h-full min-h-0 flex-col overflow-hidden pt-24 ${fill ? 'px-6 pb-5' : 'justify-end px-7 pb-16'} ${gradient}`}
       aria-label={announcement}
     >
       <div
@@ -22,7 +28,9 @@ export function SlideShell({ announcement, gradient, children }: SlideShellProps
       <p className="sr-only" aria-live="polite">
         {announcement}
       </p>
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-end">
+      <div
+        className={`relative z-10 flex min-h-0 flex-1 flex-col ${fill ? '' : 'justify-end'}`}
+      >
         {children}
       </div>
     </section>
