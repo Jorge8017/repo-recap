@@ -1,6 +1,6 @@
 # Repo Recap
 
-A story-style, animated yearly recap for any **public GitHub profile**. No login required in the browser — open a username and play the reel.
+Type any public GitHub username and get a story-style recap: languages, streaks, peak hours and a personality card worth sharing. No login required in the browser.
 
 Live: https://recap.jordanshears.com
 

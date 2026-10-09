@@ -10,6 +10,7 @@ import {
   topLanguagesFromRepos,
 } from '../lib/stats'
 import { planSlides } from '../lib/slidePlan'
+import { slideKicker } from '../lib/slideMeta'
 import {
   buildSnapshotTiles,
   shouldUseSingleStatSnapshot,
@@ -332,6 +333,49 @@ describe('planSlides', () => {
       'personality',
       'summary',
     ])
+  })
+
+  it('matches kicker TT and progress segment count to rendered slides when streak and starred are skipped', () => {
+    const stats = buildRecapStats(
+      user({ public_repos: 2 }),
+      [
+        repo({
+          name: 'blank',
+          language: 'TypeScript',
+          stargazers_count: 0,
+          forks_count: 1,
+        }),
+      ],
+      [],
+    )
+    expect(stats.longestStreak).toBe(0)
+    expect(stats.totalCommitsPushed).toBe(0)
+    expect(stats.mostStarredRepo).toBeNull()
+
+    const slides = planSlides(stats)
+    expect(slides).not.toContain('streak')
+    expect(slides).not.toContain('starred')
+    expect(slides).toEqual([
+      'intro',
+      'age',
+      'totals',
+      'languages',
+      'personality',
+      'summary',
+    ])
+
+    const renderedCount = slides.length
+    const segmentCount = slides.length
+    expect(segmentCount).toBe(renderedCount)
+
+    const totalLabel = String(renderedCount).padStart(2, '0')
+    for (let index = 0; index < slides.length; index += 1) {
+      const id = slides[index]!
+      const kicker = slideKicker(index, renderedCount, id)
+      expect(kicker).toMatch(
+        new RegExp(`^${String(index + 1).padStart(2, '0')} / ${totalLabel} · `),
+      )
+    }
   })
 })
 

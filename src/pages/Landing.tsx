@@ -106,13 +106,8 @@ export function Landing() {
             told as a story.
           </h1>
           <p className="max-w-[480px] text-base leading-relaxed text-[#C9BFD6] lg:text-[20px] lg:leading-[1.5]">
-            <span className="lg:hidden">
-              Nine slides from any public GitHub profile. No login needed.
-            </span>
-            <span className="hidden lg:inline">
-              Type any public GitHub username and get a nine-slide recap: languages,
-              streaks, peak hours, and a personality card worth sharing.
-            </span>
+            Type any public GitHub username and get a story-style recap: languages,
+            streaks, peak hours and a personality card worth sharing.
           </p>
 
           <form
@@ -221,7 +216,7 @@ export function Landing() {
       >
         {[
           { n: '01', title: 'Pick a profile', body: 'Any public GitHub username. No OAuth, no token, no waitlist.' },
-          { n: '02', title: 'Play the reel', body: 'Nine slides of languages, streaks, peak hours, and a personality reveal.' },
+          { n: '02', title: 'Play the reel', body: 'Languages, streaks, peak hours, and a personality reveal — tailored to what their public profile shows.' },
           { n: '03', title: 'Share the card', body: 'Download a 1080 × 1350 image or copy a link back to the recap.' },
         ].map((step) => (
           <div key={step.n}>
