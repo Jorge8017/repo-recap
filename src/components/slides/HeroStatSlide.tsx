@@ -30,7 +30,10 @@ export function HeroStatSlide({
         >
           {lead}
         </p>
-        <div className="mt-2 flex min-w-0 max-w-full items-baseline gap-3">
+        <div
+          className="mt-2 flex min-w-0 max-w-full items-start gap-3"
+          style={{ minHeight: 96 }}
+        >
           <span className="min-w-0 flex-1 basis-0 overflow-hidden">
             <span
               ref={valueRef}
@@ -48,8 +51,8 @@ export function HeroStatSlide({
           </span>
           {unit ? (
             <span
-              className="shrink-0 leading-none font-bold text-[#F4EDE2]"
-              style={{ fontSize: unitSize }}
+              className="shrink-0 self-end leading-none font-bold text-[#F4EDE2]"
+              style={{ fontSize: unitSize, marginBottom: 6 }}
             >
               {unit}
             </span>

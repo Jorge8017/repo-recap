@@ -21,12 +21,15 @@ if (!root) {
   throw new Error('Root element not found')
 }
 
+const app = (
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </QueryClientProvider>
+)
+
+// Playwright sets VITE_E2E so mount-count assertions are not doubled by StrictMode.
 createRoot(root).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </QueryClientProvider>
-  </StrictMode>,
+  import.meta.env.VITE_E2E === 'true' ? app : <StrictMode>{app}</StrictMode>,
 )

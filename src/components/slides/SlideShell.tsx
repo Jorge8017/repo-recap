@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 interface SlideShellProps {
   announcement: string
@@ -17,25 +17,9 @@ export function SlideShell({
   footer,
   pinBottom = true,
 }: SlideShellProps) {
-  const shellRef = useRef<HTMLElement>(null)
-  const [compact, setCompact] = useState(false)
-
-  useLayoutEffect(() => {
-    const node = shellRef.current
-    if (!node) return
-    const update = () => {
-      setCompact(node.clientHeight < 680)
-    }
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [])
-
   return (
     <section
-      ref={shellRef}
-      className={`slide-shell relative flex h-full min-h-0 flex-col overflow-hidden ${compact ? 'slide-shell--compact' : ''} ${fill ? 'px-5 py-4' : 'px-5 pb-5 lg:px-8 lg:pb-6 pt-[var(--story-chrome,5.75rem)]'} ${gradient}`}
+      className={`slide-shell relative flex h-full min-h-0 flex-col overflow-hidden ${fill ? 'px-5 py-4' : 'px-5 pb-5 lg:px-8 lg:pb-6 pt-[var(--story-chrome,5.75rem)]'} ${gradient}`}
       aria-label={announcement}
     >
       <div

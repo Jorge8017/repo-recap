@@ -34,6 +34,23 @@ import { SLIDE_COMPONENTS, SummarySlide } from './slides'
 const SLIDE_MS = 5000
 const HOLD_MS = 200
 
+declare global {
+  interface Window {
+    __REPO_RECAP_SLIDE_MOUNTS__?: Record<string, number>
+  }
+}
+
+function SlideMountProbe({ id }: { id: SlideId }) {
+  useEffect(() => {
+    const mounts = (window.__REPO_RECAP_SLIDE_MOUNTS__ ??= {})
+    mounts[id] = (mounts[id] ?? 0) + 1
+    if (import.meta.env.DEV) {
+      console.warn(`[slide-mount] ${id} #${mounts[id]}`)
+    }
+  }, [id])
+  return null
+}
+
 export function StoryPlayer({
   recap,
   avatarSrc,
@@ -41,8 +58,8 @@ export function StoryPlayer({
   recap: RecapResult
   avatarSrc: string
 }) {
+  const slides = useMemo(() => planSlides(recap.stats), [recap])
   const { stats, personality } = recap
-  const slides = useMemo(() => planSlides(stats), [stats])
   const reducedMotion = usePrefersReducedMotion()
   const navigate = useNavigate()
   const [index, setIndex] = useState(0)
@@ -269,7 +286,7 @@ export function StoryPlayer({
             <div
               ref={cardRef}
               data-testid="story-card"
-              className="relative flex h-full w-full min-h-0 flex-col overflow-hidden lg:h-[min(746px,100%)] lg:w-[420px] lg:rounded-[32px] lg:shadow-[0_50px_100px_rgba(0,0,0,0.55)]"
+              className="story-card relative flex h-full w-full min-h-0 flex-col overflow-hidden lg:h-[min(746px,100%)] lg:w-[420px] lg:rounded-[32px] lg:shadow-[0_50px_100px_rgba(0,0,0,0.55)]"
               onPointerDown={onPointerDown}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerCancel}
@@ -278,17 +295,26 @@ export function StoryPlayer({
               <div className="absolute inset-0 z-0">
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
-                    key={`${currentId}-${index}`}
+                    key={currentId}
+                    data-testid={`slide-${currentId}`}
+                    data-slide-id={currentId}
                     className="absolute inset-0"
-                    initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 28 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -18 }}
+                    initial={
+                      reducedMotion ? { opacity: 1 } : { opacity: 0, y: 28 }
+                    }
+                    animate={
+                      reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }
+                    }
+                    exit={
+                      reducedMotion ? { opacity: 0 } : { opacity: 0, y: -18 }
+                    }
                     transition={
                       reducedMotion
                         ? { duration: 0 }
                         : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
                     }
                   >
+                    <SlideMountProbe id={currentId} />
                     {renderSlide(currentId)}
                   </motion.div>
                 </AnimatePresence>

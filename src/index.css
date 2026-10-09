@@ -63,6 +63,11 @@ input:focus-visible {
   flex-direction: column;
 }
 
+.story-card {
+  container-type: size;
+  container-name: story-card;
+}
+
 .monthly-bars-slot {
   flex: 1 1 auto;
   min-height: 64px;
@@ -73,8 +78,18 @@ input:focus-visible {
   flex-direction: column;
 }
 
-.slide-shell--compact .monthly-bars-slot {
-  display: none;
+@container story-card (max-height: 560px) {
+  .monthly-bars-slot,
+  .monthly-bars {
+    display: none;
+  }
+}
+
+@media (max-height: 760px) {
+  .monthly-bars-slot,
+  .monthly-bars {
+    display: none;
+  }
 }
 
 .monthly-bars {

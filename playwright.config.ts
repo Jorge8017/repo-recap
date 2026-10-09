@@ -18,6 +18,7 @@ export default defineConfig({
     env: {
       ...process.env,
       VITE_USE_API: 'true',
+      VITE_E2E: 'true',
     },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

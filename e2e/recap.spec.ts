@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 import fixture from './fixtures/github.json' with { type: 'json' }
 
+declare global {
+  interface Window {
+    __REPO_RECAP_SLIDE_MOUNTS__?: Record<string, number>
+  }
+}
+
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
   'base64',
@@ -370,5 +376,184 @@ test.describe('short card hero visibility', () => {
   }) => {
     await page.setViewportSize({ width: 390, height: 700 })
     await assertHeroStatsVisibleOnEverySlide(page)
+  })
+})
+
+async function pausePlayback(page: Page) {
+  const pause = page.getByRole('button', { name: 'Pause' })
+  if (await pause.count()) {
+    await pause.click()
+  }
+  await expect(page.getByRole('button', { name: 'Play' })).toBeVisible()
+}
+
+async function slideMountCount(page: Page, slideId: string) {
+  return page.evaluate((id) => window.__REPO_RECAP_SLIDE_MOUNTS__?.[id] ?? 0, slideId)
+}
+
+async function openMockedRecap(page: Page) {
+  await mockRecapApi(page, fixture)
+  await page.goto('/u/octocat')
+  await expect(
+    page.getByRole('heading', { name: /your recap is ready/i }),
+  ).toBeVisible({ timeout: 15_000 })
+  await page.evaluate(() => document.fonts.ready)
+  await pausePlayback(page)
+}
+
+async function assertSlideMountedOnce(page: Page, slideId: string) {
+  const slide = page.getByTestId(`slide-${slideId}`)
+  await expect(slide).toHaveCount(1)
+  await expect(slide).toBeVisible()
+  const before = await slideMountCount(page, slideId)
+  expect(before).toBe(1)
+  await page.waitForTimeout(3000)
+  expect(await slideMountCount(page, slideId)).toBe(1)
+  await expect(page.getByTestId(`slide-${slideId}`)).toHaveCount(1)
+}
+
+async function currentSlideId(page: Page) {
+  return page.locator('[data-slide-id]').first().getAttribute('data-slide-id')
+}
+
+async function assertEverySlideMountedOnce(page: Page) {
+  await openMockedRecap(page)
+
+  for (let step = 0; step < 16; step += 1) {
+    const summary = page.getByTestId('share-card-preview')
+    if (await summary.isVisible()) break
+
+    const slideId = await currentSlideId(page)
+    expect(slideId).toBeTruthy()
+    if (!slideId) break
+
+    await assertSlideMountedOnce(page, slideId)
+    await page.keyboard.press('ArrowRight')
+    await Promise.race([
+      page
+        .waitForFunction(
+          (prev) => {
+            const summaryVisible = Boolean(
+              document.querySelector('[data-testid="share-card-preview"]'),
+            )
+            if (summaryVisible) return true
+            const el = document.querySelector('[data-slide-id]')
+            return Boolean(el && el.getAttribute('data-slide-id') !== prev)
+          },
+          slideId,
+          { timeout: 5_000 },
+        )
+        .catch(() => null),
+      page
+        .getByTestId('share-card-preview')
+        .waitFor({ state: 'visible', timeout: 5_000 })
+        .catch(() => null),
+    ])
+  }
+}
+
+async function waitForStableBoundingBox(
+  page: Page,
+  testId: string,
+  settleMs = 400,
+) {
+  const deadline = Date.now() + 5_000
+  let last: { x: number; y: number; width: number; height: number } | null =
+    null
+  let stableAt = 0
+
+  while (Date.now() < deadline) {
+    const box = await page.getByTestId(testId).boundingBox()
+    expect(box).toBeTruthy()
+    if (
+      box &&
+      last &&
+      Math.abs(box.x - last.x) <= 1 &&
+      Math.abs(box.y - last.y) <= 1 &&
+      Math.abs(box.width - last.width) <= 1 &&
+      Math.abs(box.height - last.height) <= 1
+    ) {
+      if (Date.now() - stableAt >= settleMs) return box
+    } else if (box) {
+      last = box
+      stableAt = Date.now()
+    }
+    await page.waitForTimeout(50)
+  }
+
+  throw new Error(`bounding box for ${testId} did not settle`)
+}
+
+async function assertYearHeroPositionStable(page: Page) {
+  await openMockedRecap(page)
+  await goToSlideWithText(page, 'Your last 12 months')
+  await expect(page.getByTestId('slide-year')).toHaveCount(1)
+  await pausePlayback(page)
+  await page.evaluate(() => document.fonts.ready)
+
+  const value = page.getByTestId('hero-stat-value')
+  await expect(value).toBeVisible()
+  await waitForStableBoundingBox(page, 'hero-stat-value')
+
+  const samples: Array<{ x: number; y: number }> = []
+  for (let i = 0; i < 20; i += 1) {
+    const box = await value.boundingBox()
+    expect(box).toBeTruthy()
+    if (box) samples.push({ x: box.x, y: box.y })
+    await page.waitForTimeout(100)
+  }
+
+  const origin = samples[0]
+  expect(origin).toBeTruthy()
+  for (const sample of samples) {
+    expect(Math.abs(sample.x - origin!.x)).toBeLessThanOrEqual(1)
+    expect(Math.abs(sample.y - origin!.y)).toBeLessThanOrEqual(1)
+  }
+}
+
+test.describe('slide mount stability', () => {
+  test.use({
+    timezoneId: 'UTC',
+    reducedMotion: 'reduce',
+  })
+
+  test('year slide mounts once while paused at 1440x620', async ({ page }) => {
+    test.setTimeout(60_000)
+    await page.setViewportSize({ width: 1440, height: 620 })
+    await openMockedRecap(page)
+    await goToSlideWithText(page, 'Your last 12 months')
+    await pausePlayback(page)
+    await assertSlideMountedOnce(page, 'year')
+  })
+
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1440, height: 620 },
+    { width: 390, height: 700 },
+  ] as const) {
+    test(`every slide mounts once at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      test.setTimeout(180_000)
+      await page.setViewportSize(viewport)
+      await assertEverySlideMountedOnce(page)
+    })
+  }
+})
+
+test.describe('year hero position stability', () => {
+  test.use({
+    timezoneId: 'UTC',
+    reducedMotion: 'reduce',
+  })
+
+  test('hero value stays put at 1440x620', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 620 })
+    await assertYearHeroPositionStable(page)
+  })
+
+  test('hero value stays put at 1440x900', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await assertYearHeroPositionStable(page)
   })
 })
