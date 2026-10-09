@@ -1,6 +1,7 @@
 import { LANGUAGE_BAR_COLORS } from '../lib/slideMeta'
 import { formatCount } from '../lib/stats'
 import type { Personality, RecapStats } from '../types'
+import { PersonalityIcon } from './PersonalityIcon'
 
 export const SHARE_CARD_WIDTH = 1080
 export const SHARE_CARD_HEIGHT = 1350
@@ -93,9 +94,9 @@ export function ShareCard({
       </div>
 
       <div className="flex flex-col" style={{ gap: 22 }}>
-        <p style={{ fontSize: 144, lineHeight: 1 }} aria-hidden="true">
-          {personality.emoji}
-        </p>
+        <div aria-hidden="true">
+          <PersonalityIcon id={personality.id} size={144} />
+        </div>
         <h2
           className="font-bold"
           style={{

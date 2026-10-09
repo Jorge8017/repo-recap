@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
 import { ArrowRightIcon, CheckIcon } from '../components/Icons'
+import { PersonalityIcon } from '../components/PersonalityIcon'
 import { SITE_NAME } from '../lib/site'
 import { isValidGitHubUsername } from '../lib/username'
 
@@ -234,8 +235,11 @@ function PreviewCollage({ className = '' }: { className?: string }) {
         <span className="hidden font-mono text-[10px] tracking-[0.16em] text-[#E6C8FF] uppercase lg:inline">
           The reveal
         </span>
-        <span className="text-[26px] leading-none lg:text-[56px]" aria-hidden="true">
-          🌙
+        <span className="leading-none lg:hidden" aria-hidden="true">
+          <PersonalityIcon id="night-owl" size={26} />
+        </span>
+        <span className="hidden leading-none lg:block" aria-hidden="true">
+          <PersonalityIcon id="night-owl" size={56} />
         </span>
         <span className="text-xl leading-none font-bold tracking-[-0.03em] lg:text-[46px]">
           Night Owl

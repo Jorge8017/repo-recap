@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import type { SlideProps } from '../../types'
+import { PersonalityIcon } from '../PersonalityIcon'
 import { Headline, SlideShell } from './SlideShell'
 
 export function QuietSlide({ reducedMotion }: SlideProps) {
@@ -9,15 +10,13 @@ export function QuietSlide({ reducedMotion }: SlideProps) {
       gradient="bg-gradient-to-br from-[#12151c] via-[#2a3348] to-[#5c6b88]"
     >
       <motion.div
-        className="mb-8 flex items-end gap-2"
+        className="mb-8"
         initial={reducedMotion ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={reducedMotion ? { duration: 0 } : { duration: 0.55 }}
         aria-hidden="true"
       >
-        <span className="text-5xl">🎨</span>
-        <span className="text-7xl">👻</span>
-        <span className="text-5xl">🫧</span>
+        <PersonalityIcon id="ghost-mode" size={72} />
       </motion.div>
       <Headline>Your public profile is a blank canvas.</Headline>
       <p className="mt-5 max-w-[24ch] text-lg leading-snug text-white/80">
