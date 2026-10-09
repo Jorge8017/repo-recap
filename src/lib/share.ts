@@ -59,8 +59,6 @@ export async function withShareTimeout<T>(
   }
 }
 
-export { waitForExportReady as waitForCardAssets } from './downloadImage'
-
 export function canShareFiles(
   payload: { files: File[] },
   canShare: Navigator['canShare'] | undefined = navigator.canShare?.bind(navigator),

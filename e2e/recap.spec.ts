@@ -206,6 +206,21 @@ test('plays a mocked recap through to the downloadable share card', async ({
   context,
 }) => {
   await mockRecapApi(page, fixture)
+
+  const largePng = Buffer.concat([
+    PNG,
+    Buffer.alloc(52_000, 0),
+  ])
+  let shareImageHits = 0
+  await page.route('**/api/share-image?**', async (route) => {
+    shareImageHits += 1
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: largePng,
+    })
+  })
+
   await page.goto('/')
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
 
@@ -227,9 +242,20 @@ test('plays a mocked recap through to the downloadable share card', async ({
 
   await expect(preview.getByTestId('share-card-title')).toHaveText('Builder')
   await expect(preview.getByTestId('share-card-title')).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: /download image|save image/i }),
-  ).toBeVisible()
+  const downloadBtn = page.getByRole('button', {
+    name: /download image|save image/i,
+  })
+  await expect(downloadBtn).toBeVisible()
+
+  const downloadPromise = page.waitForEvent('download')
+  await downloadBtn.click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe('repo-recap-octocat.png')
+  const downloadPath = await download.path()
+  expect(downloadPath).toBeTruthy()
+  const { statSync } = await import('node:fs')
+  expect(statSync(downloadPath!).size).toBeGreaterThan(50_000)
+  expect(shareImageHits).toBeGreaterThanOrEqual(1)
 
   const share = page.getByRole('button', { name: /share|copy recap link/i })
   await share.click()

@@ -1,5 +1,21 @@
 {
+  "functions": {
+    "api/share-image.ts": {
+      "includeFiles": "api/_fonts/**"
+    }
+  },
   "rewrites": [
+    {
+      "source": "/u/:username",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(WhatsApp|facebookexternalhit|Twitterbot|Slackbot|LinkedInBot|Discordbot|TelegramBot).*"
+        }
+      ],
+      "destination": "/api/og-html?u=:username"
+    },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

@@ -29,6 +29,16 @@ export function personalityIconMarkup(
   }
 }
 
+/** Standalone SVG data URI for Satori/ImageResponse (no external fetch). */
+export function personalityIconDataUri(
+  id: PersonalityId,
+  color = '#F2C46D',
+): string {
+  const body = personalityIconMarkup(id, color, 24, 0, 0)
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 24 24">${body}</svg>`
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+}
+
 export function c1LogoMarkup(
   x: number,
   y: number,

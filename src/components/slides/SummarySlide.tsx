@@ -1,13 +1,13 @@
-import * as htmlToImage from 'html-to-image'
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFitScale } from '../../hooks/useFitScale'
 import { FittedText } from '../FittedText'
 import {
-  assertPngBlob,
   downloadPngBlob,
+  fetchShareImagePng,
+  IMAGE_API_TOAST,
   IMAGE_CREATE_TOAST,
-  waitForExportReady,
+  ShareImageApiUnavailableError,
 } from '../../lib/downloadImage'
 import {
   canShareFiles,
@@ -45,7 +45,6 @@ export function SummarySlide({
   slideCount = 9,
 }: SlideProps & { onReplay: () => void; slideCount?: number }) {
   const navigate = useNavigate()
-  const exportRef = useRef<HTMLDivElement>(null)
   const readmeTriggerRef = useRef<HTMLButtonElement>(null)
   const { ref: previewHostRef, scale } = useFitScale(
     SHARE_CARD_WIDTH,
@@ -62,29 +61,22 @@ export function SummarySlide({
     window.setTimeout(() => setToast(null), 2400)
   }
 
-  const capturePngBlob = async (): Promise<Blob> => {
-    await waitForExportReady(avatarSrc)
-    const node = exportRef.current
-    if (!node) throw new Error('Share card is not ready')
-    const blob = await htmlToImage.toBlob(node, {
-      pixelRatio: 1,
-      cacheBust: true,
-      width: SHARE_CARD_WIDTH,
-      height: SHARE_CARD_HEIGHT,
-      style: { transform: 'none', left: '0', position: 'relative' },
-    })
-    return assertPngBlob(blob)
+  const toastForImageError = (error: unknown) => {
+    if (error instanceof ShareImageApiUnavailableError) {
+      return IMAGE_API_TOAST
+    }
+    return IMAGE_CREATE_TOAST
   }
 
   const onDownload = async () => {
     setDownloading(true)
     try {
-      const blob = await capturePngBlob()
+      const blob = await fetchShareImagePng(stats.username)
       downloadPngBlob(blob, `repo-recap-${stats.username}.png`)
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       console.error('Could not create share image', reason)
-      showToast(IMAGE_CREATE_TOAST)
+      showToast(toastForImageError(error))
     } finally {
       setDownloading(false)
     }
@@ -107,7 +99,7 @@ export function SummarySlide({
         return
       }
 
-      const blob = await capturePngBlob()
+      const blob = await fetchShareImagePng(stats.username)
       const file = new File([blob], `repo-recap-${stats.username}.png`, {
         type: 'image/png',
       })
@@ -129,8 +121,16 @@ export function SummarySlide({
     try {
       const raced = await withShareTimeout(run(), SHARE_TIMEOUT_MS)
       if (raced.status === 'error') {
-        const message = toastForShareError(raced.error)
-        if (message) showToast(message)
+        if (
+          raced.error instanceof ShareImageApiUnavailableError ||
+          (raced.error instanceof Error &&
+            raced.error.name === 'InvalidPngError')
+        ) {
+          showToast(toastForImageError(raced.error))
+        } else {
+          const message = toastForShareError(raced.error)
+          if (message) showToast(message)
+        }
       }
     } finally {
       setSharing(false)
@@ -146,31 +146,6 @@ export function SummarySlide({
       className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden px-5 pb-4 lg:px-10 lg:pb-5"
       aria-label={`Summary for ${stats.displayName}: ${personality.title}.`}
     >
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'fixed',
-          left: -10000,
-          top: 0,
-          width: SHARE_CARD_WIDTH,
-          height: SHARE_CARD_HEIGHT,
-          transform: 'none',
-          pointerEvents: 'none',
-        }}
-      >
-        <div
-          ref={exportRef}
-          style={{ width: SHARE_CARD_WIDTH, height: SHARE_CARD_HEIGHT }}
-        >
-          <ShareCard
-            stats={stats}
-            personality={personality}
-            avatarSrc={avatarSrc}
-            siteOrigin={origin}
-          />
-        </div>
-      </div>
-
       <div className="flex items-center justify-between pt-[max(0.85rem,env(safe-area-inset-top))] lg:hidden">
         <div className="flex w-full gap-1" aria-hidden="true">
           {Array.from({ length: slideCount }, (_, slot) => (
@@ -246,7 +221,7 @@ export function SummarySlide({
             <UiButton
               className="h-12 flex-1 text-base lg:h-14 lg:text-lg"
               onClick={() => void onDownload()}
-              disabled={downloading}
+              disabled={downloading || sharing}
             >
               <DownloadIcon width={20} height={20} />
               <span className="lg:hidden">{downloading ? 'Preparing…' : 'Save image'}</span>
@@ -258,7 +233,7 @@ export function SummarySlide({
               variant="secondary"
               className="h-12 flex-1 text-base lg:h-14 lg:text-lg"
               onClick={() => void onShare()}
-              disabled={sharing}
+              disabled={sharing || downloading}
             >
               <span className="lg:hidden">
                 <ShareArrowIcon width={18} height={18} />

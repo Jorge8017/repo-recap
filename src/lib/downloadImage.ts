@@ -1,10 +1,19 @@
 export const MIN_PNG_BYTES = 50_000
 export const IMAGE_CREATE_TOAST = "Couldn't create the image — try again"
+export const IMAGE_API_TOAST =
+  'Image download needs the deployed API — run npm run dev:api'
 
 export class InvalidPngError extends Error {
   constructor(reason: string) {
     super(reason)
     this.name = 'InvalidPngError'
+  }
+}
+
+export class ShareImageApiUnavailableError extends Error {
+  constructor(message = IMAGE_API_TOAST) {
+    super(message)
+    this.name = 'ShareImageApiUnavailableError'
   }
 }
 
@@ -39,19 +48,29 @@ export function downloadPngBlob(
   URL.revokeObjectURL(objectUrl)
 }
 
-export async function waitForAnimationFrame(): Promise<void> {
-  if (typeof requestAnimationFrame !== 'function') return
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => resolve())
-  })
-}
+export async function fetchShareImagePng(username: string): Promise<Blob> {
+  let response: Response
+  try {
+    response = await fetch(
+      `/api/share-image?u=${encodeURIComponent(username)}`,
+    )
+  } catch {
+    throw new ShareImageApiUnavailableError()
+  }
 
-export async function waitForExportReady(avatarSrc: string): Promise<void> {
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
-    await document.fonts.ready
+  const contentType = response.headers.get('content-type') ?? ''
+  if (contentType.includes('text/html')) {
+    throw new ShareImageApiUnavailableError()
   }
-  if (!avatarSrc.startsWith('data:')) {
-    throw new InvalidPngError('Avatar data URL is not ready')
+
+  if (!response.ok) {
+    throw new InvalidPngError(`share-image HTTP ${response.status}`)
   }
-  await waitForAnimationFrame()
+
+  const raw = await response.blob()
+  const png =
+    raw.type === 'image/png'
+      ? raw
+      : new Blob([await raw.arrayBuffer()], { type: 'image/png' })
+  return assertPngBlob(png)
 }
