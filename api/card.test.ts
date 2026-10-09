@@ -152,6 +152,25 @@ describe('buildRecapCardSvg', () => {
     expect(svg).toContain(`${'A'.repeat(21)}…`)
     expect(svg).not.toContain(long)
   })
+
+  it('right-aligns the personality badge as a pill at the top-right padding edge', () => {
+    const svg = buildRecapCardSvg({
+      payload: samplePayload(),
+      theme: 'dark',
+      avatarDataUri: null,
+      now: new Date('2024-06-15T12:00:00.000Z'),
+    })
+
+    expect(svg).toContain('text-anchor="end"')
+    expect(svg).toContain('fill-opacity="0.15"')
+    expect(svg).toMatch(
+      /<rect x="[\d.]+" y="20" width="[\d.]+" height="34" rx="17" fill="#F2C46D" fill-opacity="0\.15"\/>/,
+    )
+    expect(svg).toMatch(
+      /<text x="475" y="[\d.]+" text-anchor="end"[^>]*>Builder<\/text>/,
+    )
+    expect(svg).toMatchSnapshot()
+  })
 })
 
 describe('statusCardSvg', () => {

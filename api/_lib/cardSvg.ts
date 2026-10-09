@@ -50,6 +50,40 @@ const SANS =
 const MONO =
   'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
 
+const CARD_WIDTH = 495
+const CARD_HEIGHT = 200
+const CARD_PADDING = 20
+
+/** Approximate bold sans glyph width for pill sizing (no measureText in SVG build). */
+function estimateTitleWidth(title: string, fontSize: number): number {
+  return Math.ceil(title.length * fontSize * 0.62)
+}
+
+function personalityBadgeMarkup(
+  id: PersonalityId,
+  title: string,
+  color: string,
+): string {
+  const iconSize = 22
+  const fontSize = 14
+  const gap = 6
+  const padX = 10
+  const padY = 6
+  const textW = estimateTitleWidth(title, fontSize)
+  const textX = CARD_WIDTH - CARD_PADDING
+  const pillW = padX + iconSize + gap + textW + padX
+  const pillH = iconSize + padY * 2
+  const pillX = textX - textW - gap - iconSize - padX
+  const pillY = CARD_PADDING
+  const iconX = pillX + padX
+  const iconY = pillY + padY
+  const textY = pillY + pillH / 2 + fontSize * 0.35
+
+  return `<rect x="${pillX}" y="${pillY}" width="${pillW}" height="${pillH}" rx="${pillH / 2}" fill="${color}" fill-opacity="0.15"/>
+  ${personalityIconMarkup(id, color, iconSize, iconX, iconY)}
+  <text x="${textX}" y="${textY}" text-anchor="end" font-family='${SANS}' font-size="${fontSize}" font-weight="700" fill="${color}">${escapeXml(title)}</text>`
+}
+
 export function statusCardSvg(
   message: string,
   theme: CardTheme = 'dark',
@@ -57,11 +91,11 @@ export function statusCardSvg(
   const colors = themeColors(theme)
   const label = escapeXml(message)
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="495" height="200" viewBox="0 0 495 200" role="img" aria-label="${label}">
-  <rect width="495" height="200" rx="12" fill="${colors.background}"/>
-  <rect x="1" y="1" width="493" height="198" rx="11" fill="none" stroke="${colors.border}"/>
-  <text x="247.5" y="105" text-anchor="middle" font-family='${SANS}' font-size="18" fill="${colors.text}">${label}</text>
-  <g opacity="0.9">${c1LogoMarkup(20, 168, 16, colors.text)}</g>
+<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_WIDTH}" height="${CARD_HEIGHT}" viewBox="0 0 ${CARD_WIDTH} ${CARD_HEIGHT}" role="img" aria-label="${label}">
+  <rect width="${CARD_WIDTH}" height="${CARD_HEIGHT}" rx="12" fill="${colors.background}"/>
+  <rect x="1" y="1" width="${CARD_WIDTH - 2}" height="${CARD_HEIGHT - 2}" rx="11" fill="none" stroke="${colors.border}"/>
+  <text x="${CARD_WIDTH / 2}" y="105" text-anchor="middle" font-family='${SANS}' font-size="18" fill="${colors.text}">${label}</text>
+  <g opacity="0.9">${c1LogoMarkup(CARD_PADDING, 168, 16, colors.text)}</g>
   <text x="42" y="181" font-family='${MONO}' font-size="11" fill="${colors.muted}">recap.jordanshears.com</text>
 </svg>`
 }
@@ -176,24 +210,21 @@ export function buildRecapCardSvg(options: {
   ).toUpperCase()
 
   const iconColor = colors.gold
-  const iconX = 330
-  const titleX = 358
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="495" height="200" viewBox="0 0 495 200" role="img" aria-label="${escapeXml(`${name} Repo Recap`)}">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${CARD_WIDTH}" height="${CARD_HEIGHT}" viewBox="0 0 ${CARD_WIDTH} ${CARD_HEIGHT}" role="img" aria-label="${escapeXml(`${name} Repo Recap`)}">
   <defs>
     <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="${colors.backgroundAlt}"/>
       <stop offset="1" stop-color="${colors.background}"/>
     </linearGradient>
   </defs>
-  <rect width="495" height="200" rx="12" fill="url(#cardBg)"/>
-  <rect x="1" y="1" width="493" height="198" rx="11" fill="none" stroke="${colors.border}"/>
+  <rect width="${CARD_WIDTH}" height="${CARD_HEIGHT}" rx="12" fill="url(#cardBg)"/>
+  <rect x="1" y="1" width="${CARD_WIDTH - 2}" height="${CARD_HEIGHT - 2}" rx="11" fill="none" stroke="${colors.border}"/>
   ${avatarMarkup(avatarDataUri, initial, colors)}
   <text x="80" y="38" font-family='${SANS}' font-size="18" font-weight="700" fill="${colors.text}">${escapeXml(name)}</text>
   <text x="80" y="58" font-family='${MONO}' font-size="12" fill="${colors.muted}">${escapeXml(login)}</text>
-  ${personalityIconMarkup(personality.id as PersonalityId, iconColor, 22, iconX, 26)}
-  <text x="${titleX}" y="42" font-family='${SANS}' font-size="14" font-weight="700" fill="${colors.gold}">${escapeXml(personalityTitle)}</text>
+  ${personalityBadgeMarkup(personality.id as PersonalityId, personalityTitle, iconColor)}
   <text x="20" y="98" font-family='${SANS}' font-size="16" font-weight="700" fill="${colors.text}">${escapeXml(contributions)} contributions</text>
   <text x="20" y="118" font-family='${MONO}' font-size="12" fill="${colors.muted}">Last 12 months · ${escapeXml(streak)}</text>
   ${languageBar(stats.topLanguages, colors)}
