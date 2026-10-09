@@ -37,13 +37,13 @@ export const MonthlyBars = memo(function MonthlyBars({
 
   return (
     <div
-      className={`monthly-bars mt-8 w-full min-w-0 ${active ? 'monthly-bars--active' : ''}`}
+      className={`monthly-bars ${active ? 'monthly-bars--active' : ''}`}
       data-testid="monthly-bars"
       role="img"
       aria-label={aria}
     >
       <div
-        className="grid h-24 items-end lg:h-[120px]"
+        className="monthly-bars-chart"
         style={{
           gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
           gap: 'var(--monthly-bars-gap, 6px)',
@@ -53,15 +53,18 @@ export const MonthlyBars = memo(function MonthlyBars({
         {months.map((month, index) => {
           const ratio = max > 0 ? month.total / max : 0
           const heightPct =
-            month.total > 0 ? Math.max((3 / 120) * 100, ratio * 100) : (3 / 120) * 100
+            month.total > 0 ? Math.max((3 / 120) * 100, ratio * 100) : 0
           const color = month.isBest
             ? '#F2C46D'
             : month.total === 0
-              ? 'rgba(242, 196, 109, 0.18)'
+              ? 'rgba(244, 237, 226, 0.18)'
               : 'rgba(242, 196, 109, 0.45)'
 
           return (
-            <div key={month.key} className="relative flex h-full min-w-0 flex-col justify-end">
+            <div
+              key={month.key}
+              className="relative flex h-full min-w-0 flex-col justify-end"
+            >
               {month.isBest && month.total > 0 ? (
                 <span className="absolute inset-x-0 bottom-full mb-1 text-center font-mono text-[12px] text-[#F2C46D]">
                   {formatCount(month.total)}
@@ -70,7 +73,7 @@ export const MonthlyBars = memo(function MonthlyBars({
               <div
                 className="monthly-bar w-full"
                 style={{
-                  height: `${heightPct}%`,
+                  height: month.total === 0 ? 3 : `${heightPct}%`,
                   minHeight: 3,
                   borderRadius: '4px 4px 2px 2px',
                   background: color,
@@ -82,7 +85,7 @@ export const MonthlyBars = memo(function MonthlyBars({
         })}
       </div>
       <div
-        className="mt-2 grid"
+        className="monthly-bars-labels"
         style={{
           gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
           gap: 'var(--monthly-bars-gap, 6px)',
@@ -92,8 +95,11 @@ export const MonthlyBars = memo(function MonthlyBars({
         {months.map((month) => (
           <span
             key={`${month.key}-label`}
+            data-testid="month-initial"
             className="text-center font-mono text-[11px]"
-            style={{ color: month.isBest ? '#F2C46D' : '#C9BFD6' }}
+            style={{
+              color: month.isBest ? '#F2C46D' : 'rgba(244, 237, 226, 0.6)',
+            }}
           >
             {month.initial}
           </span>

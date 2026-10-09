@@ -1,17 +1,31 @@
 import { describe, expect, it } from 'vitest'
-import { buildMonthlyBars } from '../lib/monthlyBars'
+import {
+  buildMonthlyBars,
+  sumMonthlyBars,
+  totalContributionsInWeeks,
+} from '../lib/monthlyBars'
 import type { ContributionWeek } from '../types'
 
-function weeksFromMonths(
-  entries: Array<{ key: string; days: number[] }>,
+function weeksFromDays(
+  days: Array<{ date: string; count: number }>,
 ): ContributionWeek[] {
-  return entries.map((entry) => ({
-    contributionDays: entry.days.map((count, index) => ({
-      date: `${entry.key}-${String(index + 1).padStart(2, '0')}`,
-      contributionCount: count,
-      weekday: index % 7,
-    })),
-  }))
+  const byWeek = new Map<string, ContributionWeek['contributionDays']>()
+  for (const entry of days) {
+    const date = new Date(`${entry.date}T12:00:00.000Z`)
+    const weekStart = new Date(date)
+    weekStart.setUTCDate(date.getUTCDate() - date.getUTCDay())
+    const key = weekStart.toISOString().slice(0, 10)
+    const list = byWeek.get(key) ?? []
+    list.push({
+      date: entry.date,
+      contributionCount: entry.count,
+      weekday: date.getUTCDay(),
+    })
+    byWeek.set(key, list)
+  }
+  return [...byWeek.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, contributionDays]) => ({ contributionDays }))
 }
 
 describe('buildMonthlyBars', () => {
@@ -26,16 +40,30 @@ describe('buildMonthlyBars', () => {
 
   it('marks the busiest month as best', () => {
     const now = new Date(2024, 5, 15)
-    const bars = buildMonthlyBars(
-      weeksFromMonths([
-        { key: '2024-03', days: [2, 2, 2] },
-        { key: '2024-04', days: [10, 10, 10] },
-        { key: '2024-05', days: [1] },
-      ]),
-      now,
-    )
+    const weeks = weeksFromDays([
+      { date: '2024-03-01', count: 6 },
+      { date: '2024-04-01', count: 30 },
+      { date: '2024-05-01', count: 1 },
+    ])
+    const bars = buildMonthlyBars(weeks, now)
     const best = bars.find((bar) => bar.isBest)
     expect(best?.key).toBe('2024-04')
     expect(best?.total).toBe(30)
+  })
+
+  it('sums to the calendar totalContributions for the last 12 months', () => {
+    const now = new Date(2024, 5, 15)
+    const days = [
+      { date: '2023-07-04', count: 2 },
+      { date: '2023-11-12', count: 5 },
+      { date: '2024-01-20', count: 3 },
+      { date: '2024-04-08', count: 11 },
+      { date: '2024-06-02', count: 7 },
+    ]
+    const weeks = weeksFromDays(days)
+    const calendarTotal = totalContributionsInWeeks(weeks)
+    const bars = buildMonthlyBars(weeks, now)
+    expect(sumMonthlyBars(bars)).toBe(calendarTotal)
+    expect(calendarTotal).toBe(28)
   })
 })

@@ -294,6 +294,7 @@ async function assertMonthlyBarsInsideCard(page: Page) {
   const chart = page.getByTestId('monthly-bars')
   await expect(chart).toBeVisible()
   await expect(chart.locator('.monthly-bar')).toHaveCount(12)
+  await expect(chart.getByTestId('month-initial')).toHaveCount(12)
   await expect
     .poll(async () => {
       const box = await chart.boundingBox()
@@ -305,6 +306,33 @@ async function assertMonthlyBarsInsideCard(page: Page) {
     await chart.boundingBox(),
     await page.getByTestId('story-card').boundingBox(),
   )
+}
+
+async function assertHeroStatsVisibleOnEverySlide(page: Page) {
+  await mockRecapApi(page, fixture)
+  await page.goto('/u/octocat')
+  await expect(
+    page.getByRole('heading', { name: /your recap is ready/i }),
+  ).toBeVisible({ timeout: 15_000 })
+  await page.evaluate(() => document.fonts.ready)
+
+  for (let step = 0; step < 14; step += 1) {
+    const lead = page.getByTestId('hero-stat-lead')
+    if (await lead.isVisible()) {
+      const card = page.getByTestId('story-card')
+      expectBoxInside(await lead.boundingBox(), await card.boundingBox())
+      expectBoxInside(
+        await page.getByTestId('hero-stat-value').boundingBox(),
+        await card.boundingBox(),
+      )
+      const details = page.getByTestId('hero-stat-details')
+      if (await details.count()) {
+        await expect(details).toBeVisible()
+        expectBoxInside(await details.boundingBox(), await card.boundingBox())
+      }
+    }
+    await page.keyboard.press('ArrowRight')
+  }
 }
 
 test.describe('monthly bars', () => {
@@ -321,5 +349,26 @@ test.describe('monthly bars', () => {
   test('fits inside the card at 390px', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await assertMonthlyBarsInsideCard(page)
+  })
+})
+
+test.describe('short card hero visibility', () => {
+  test.use({
+    timezoneId: 'UTC',
+    reducedMotion: 'reduce',
+  })
+
+  test('keeps lead, value and details inside the card at 1440x620', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 620 })
+    await assertHeroStatsVisibleOnEverySlide(page)
+  })
+
+  test('keeps lead, value and details inside the card at 390x700', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 700 })
+    await assertHeroStatsVisibleOnEverySlide(page)
   })
 })

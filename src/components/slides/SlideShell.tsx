@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
 interface SlideShellProps {
   announcement: string
@@ -17,9 +17,25 @@ export function SlideShell({
   footer,
   pinBottom = true,
 }: SlideShellProps) {
+  const shellRef = useRef<HTMLElement>(null)
+  const [compact, setCompact] = useState(false)
+
+  useLayoutEffect(() => {
+    const node = shellRef.current
+    if (!node) return
+    const update = () => {
+      setCompact(node.clientHeight < 680)
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <section
-      className={`relative flex h-full min-h-0 flex-col overflow-hidden ${fill ? 'px-5 py-4' : 'px-5 pb-5 lg:px-8 lg:pb-6 pt-[var(--story-chrome,5.75rem)]'} ${gradient}`}
+      ref={shellRef}
+      className={`slide-shell relative flex h-full min-h-0 flex-col overflow-hidden ${compact ? 'slide-shell--compact' : ''} ${fill ? 'px-5 py-4' : 'px-5 pb-5 lg:px-8 lg:pb-6 pt-[var(--story-chrome,5.75rem)]'} ${gradient}`}
       aria-label={announcement}
     >
       <div
@@ -32,10 +48,8 @@ export function SlideShell({
       <p className="sr-only" aria-live="polite">
         {announcement}
       </p>
-      <div
-        className={`relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${fill ? '' : 'justify-center gap-5'}`}
-      >
-        {children}
+      <div className="slide-body relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className={`slide-stack ${fill ? '' : 'gap-5'}`}>{children}</div>
       </div>
       {pinBottom && footer ? (
         <div className="relative z-10 flex shrink-0 items-end justify-between gap-4 pt-4 text-[13px] text-[#E9B9A0]">

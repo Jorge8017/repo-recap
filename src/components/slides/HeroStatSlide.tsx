@@ -22,48 +22,62 @@ export function HeroStatSlide({
   const items = details?.filter((item) => item.value.length > 0) ?? []
 
   return (
-    <div className="w-full min-w-0">
-      <p className="text-[24px] font-normal text-[#C9BFD6]">{lead}</p>
-      <div className="mt-2 flex min-w-0 max-w-full items-baseline gap-3">
-        <span className="min-w-0 flex-1 basis-0 overflow-hidden">
-          <span
-            ref={valueRef}
-            data-testid="hero-stat-value"
-            className="leading-none font-bold tracking-[-0.04em] text-[#F4EDE2]"
-            style={{
-              display: 'inline-block',
-              maxWidth: '100%',
-              whiteSpace: 'nowrap',
-              fontSize: valueSize,
-            }}
-          >
-            {value}
+    <div className="flex w-full min-w-0 flex-col">
+      <div className="shrink-0">
+        <p
+          data-testid="hero-stat-lead"
+          className="text-[24px] font-normal text-[#C9BFD6]"
+        >
+          {lead}
+        </p>
+        <div className="mt-2 flex min-w-0 max-w-full items-baseline gap-3">
+          <span className="min-w-0 flex-1 basis-0 overflow-hidden">
+            <span
+              ref={valueRef}
+              data-testid="hero-stat-value"
+              className="leading-none font-bold tracking-[-0.04em] text-[#F4EDE2]"
+              style={{
+                display: 'inline-block',
+                maxWidth: '100%',
+                whiteSpace: 'nowrap',
+                fontSize: valueSize,
+              }}
+            >
+              {value}
+            </span>
           </span>
-        </span>
-        {unit ? (
-          <span
-            className="shrink-0 leading-none font-bold text-[#F4EDE2]"
-            style={{ fontSize: unitSize }}
+          {unit ? (
+            <span
+              className="shrink-0 leading-none font-bold text-[#F4EDE2]"
+              style={{ fontSize: unitSize }}
+            >
+              {unit}
+            </span>
+          ) : null}
+        </div>
+        {items.length > 0 ? (
+          <dl
+            data-testid="hero-stat-details"
+            className="mt-8 flex gap-8 border-t border-current/18 pt-4"
           >
-            {unit}
-          </span>
+            {items.map((item) => (
+              <div key={item.label} className="min-w-0">
+                <dt className="font-mono text-[12px] tracking-[0.14em] text-[#C9BFD6] uppercase">
+                  {item.label}
+                </dt>
+                <dd className="text-[22px] font-semibold break-words text-[#F4EDE2]">
+                  {item.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
         ) : null}
       </div>
-      {items.length > 0 ? (
-        <dl className="mt-8 flex gap-8 border-t border-current/18 pt-4">
-          {items.map((item) => (
-            <div key={item.label} className="min-w-0">
-              <dt className="font-mono text-[12px] tracking-[0.14em] text-[#C9BFD6] uppercase">
-                {item.label}
-              </dt>
-              <dd className="text-[22px] font-semibold break-words text-[#F4EDE2]">
-                {item.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
+      {children ? (
+        <div className="monthly-bars-slot" data-testid="chart-slot">
+          {children}
+        </div>
       ) : null}
-      {children}
     </div>
   )
 }

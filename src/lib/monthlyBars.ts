@@ -26,35 +26,53 @@ function monthKey(year: number, monthIndex: number): string {
   return `${year}-${String(monthIndex + 1).padStart(2, '0')}`
 }
 
+export function rollingMonthKeys(now: Date = new Date()): string[] {
+  const cursor = new Date(now.getFullYear(), now.getMonth(), 1)
+  cursor.setMonth(cursor.getMonth() - 11)
+  const keys: string[] = []
+  for (let index = 0; index < 12; index += 1) {
+    keys.push(monthKey(cursor.getFullYear(), cursor.getMonth()))
+    cursor.setMonth(cursor.getMonth() + 1)
+  }
+  return keys
+}
+
+export function totalContributionsInWeeks(weeks: ContributionWeek[]): number {
+  let total = 0
+  for (const week of weeks) {
+    for (const day of week.contributionDays) {
+      total += day.contributionCount
+    }
+  }
+  return total
+}
+
 /** Build 12 rolling months (oldest → newest) from contribution calendar days. */
 export function buildMonthlyBars(
   weeks: ContributionWeek[],
   now: Date = new Date(),
 ): MonthBar[] {
-  const totals = new Map<string, number>()
+  const keys = rollingMonthKeys(now)
+  const keySet = new Set(keys)
+  const totals = new Map<string, number>(keys.map((key) => [key, 0]))
+
   for (const week of weeks) {
     for (const day of week.contributionDays) {
       const key = day.date.slice(0, 7)
+      if (!keySet.has(key)) continue
       totals.set(key, (totals.get(key) ?? 0) + day.contributionCount)
     }
   }
 
-  const cursor = new Date(now.getFullYear(), now.getMonth(), 1)
-  cursor.setMonth(cursor.getMonth() - 11)
-
-  const bars: MonthBar[] = []
-  for (let index = 0; index < 12; index += 1) {
-    const year = cursor.getFullYear()
-    const monthIndex = cursor.getMonth()
-    const key = monthKey(year, monthIndex)
-    bars.push({
+  const bars: MonthBar[] = keys.map((key) => {
+    const monthIndex = Number(key.slice(5, 7)) - 1
+    return {
       key,
       initial: MONTH_INITIALS[monthIndex] ?? '?',
       total: totals.get(key) ?? 0,
       isBest: false,
-    })
-    cursor.setMonth(cursor.getMonth() + 1)
-  }
+    }
+  })
 
   let bestIndex = -1
   let bestTotal = 0
@@ -70,4 +88,8 @@ export function buildMonthlyBars(
   }
 
   return bars
+}
+
+export function sumMonthlyBars(bars: MonthBar[]): number {
+  return bars.reduce((sum, bar) => sum + bar.total, 0)
 }

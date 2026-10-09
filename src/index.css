@@ -50,14 +50,66 @@ input:focus-visible {
   color: #f4ede2;
 }
 
+.slide-body {
+  justify-content: center;
+  justify-content: safe center;
+}
+
+.slide-stack {
+  width: 100%;
+  min-height: 0;
+  margin-block: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.monthly-bars-slot {
+  flex: 1 1 auto;
+  min-height: 64px;
+  max-height: 140px;
+  margin-top: 32px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.slide-shell--compact .monthly-bars-slot {
+  display: none;
+}
+
 .monthly-bars {
   --monthly-bars-gap: 6px;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
 
 @media (max-width: 419px) {
   .monthly-bars {
     --monthly-bars-gap: 4px;
   }
+}
+
+.monthly-bars-chart {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: end;
+  height: 96px;
+}
+
+@media (min-width: 1024px) {
+  .monthly-bars-chart {
+    height: 120px;
+  }
+}
+
+.monthly-bars-labels {
+  display: grid;
+  flex: 0 0 auto;
+  margin-top: 8px;
 }
 
 .monthly-bar {

@@ -18,6 +18,7 @@ export function useFitText(
   maxSize: number,
   minSize: number,
   wrapAtMin = false,
+  onUpdate?: (size: number) => void,
 ): number {
   const [size, setSize] = useState(maxSize)
 
@@ -29,6 +30,7 @@ export function useFitText(
 
     let cancelled = false
     let frame = 0
+    let lastWidth = -1
 
     const apply = () => {
       if (cancelled) return
@@ -39,12 +41,13 @@ export function useFitText(
       el.style.overflowWrap = 'normal'
       el.style.fontSize = `${maxSize}px`
 
-      const next = fitTextSize(
+      const measured = fitTextSize(
         maxSize,
         minSize,
         parent.clientWidth,
         el.scrollWidth,
       )
+      const next = Math.round(measured)
       el.style.fontSize = `${next}px`
 
       if (wrapAtMin && next <= minSize && el.scrollWidth > parent.clientWidth) {
@@ -52,7 +55,11 @@ export function useFitText(
         el.style.overflowWrap = 'anywhere'
       }
 
-      setSize((prev) => (prev === next ? prev : next))
+      setSize((prev) => {
+        if (Math.abs(prev - next) < 1) return prev
+        onUpdate?.(next)
+        return next
+      })
     }
 
     const schedule = () => {
@@ -61,21 +68,22 @@ export function useFitText(
     }
 
     apply()
+    lastWidth = parent.clientWidth
 
-    const observer = new ResizeObserver(schedule)
-    observer.observe(parent)
-
-    const mutations = new MutationObserver(schedule)
-    mutations.observe(el, {
-      characterData: true,
-      childList: true,
-      subtree: true,
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      const width = entry.contentRect.width
+      if (Math.abs(width - lastWidth) < 1) return
+      lastWidth = width
+      schedule()
     })
+    observer.observe(parent)
 
     const fonts = document.fonts
     if (fonts?.ready) {
       void fonts.ready.then(() => {
-        schedule()
+        if (!cancelled) schedule()
       })
     }
 
@@ -83,9 +91,8 @@ export function useFitText(
       cancelled = true
       cancelAnimationFrame(frame)
       observer.disconnect()
-      mutations.disconnect()
     }
-  }, [maxSize, minSize, ref, wrapAtMin])
+  }, [maxSize, minSize, onUpdate, ref, wrapAtMin])
 
   return size
 }
