@@ -9,7 +9,9 @@ export function BusiestSlide({ stats }: SlideProps) {
     stats.busiestHour === null ? null : formatHourLabel(stats.busiestHour)
   if (!day && hour === null) return null
 
-  const announcementParts = ['Last 90 days']
+  const announcementParts = [
+    stats.hasContributionStats ? 'Last 12 months' : 'Last 90 days',
+  ]
   if (day) announcementParts.push(`busiest day ${day}`)
   if (hour) announcementParts.push(`busiest hour ${hour} in your local time`)
 

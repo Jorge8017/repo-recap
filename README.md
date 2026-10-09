@@ -1,6 +1,6 @@
 # Repo Recap
 
-A story-style, animated yearly recap for any **public GitHub profile**. No login, no token, no analytics — open a username and play the reel.
+A story-style, animated yearly recap for any **public GitHub profile**. No login required in the browser — open a username and play the reel.
 
 Live: https://recap.jordanshears.com
 
@@ -23,41 +23,62 @@ Live: https://recap.jordanshears.com
 - React Router
 - Vitest + Playwright
 - html-to-image for the share card
+- Vercel serverless `/api/recap` (authenticated GitHub GraphQL + REST)
 
 ## How stats are derived
 
-All numbers come from three unauthenticated GitHub REST calls:
+### Production path (`/api/recap`)
 
-1. `GET /users/{username}` — profile, join date, public repo count, avatar
-2. `GET /users/{username}/repos?per_page=100&sort=pushed` — stars, forks, languages (`language` field only; no per-repo languages endpoint), most-starred repo
-3. `GET /users/{username}/events/public` — up to 3 pages. Treated as roughly the **last 90 days**: busiest weekday/hour (viewer’s local time), push/commit totals, consecutive-day streak, most active repo in the window
+A Vercel function reads `GITHUB_TOKEN` from the server environment (never `VITE_`, never sent to the client) and:
 
-Pure functions in `src/lib/stats.ts` turn those payloads into recap stats. `src/lib/personality.ts` maps them onto a personality card (Ghost Mode for empty public profiles, then Night Owl, Polyglot, Weekend Warrior, Star Collector, Marathon Coder, Builder).
+1. Runs one GitHub GraphQL query for profile, public repos, and the last-12-month contribution calendar
+2. Fetches REST `/users/{u}/events/public` (up to 3 pages) for peak hour only
 
-Event-based slides are labelled **last 90 days**. Empty or zero values are skipped instead of shown.
+The client loads `/api/recap?u={username}` and maps the payload through `src/lib/stats.ts`. CDN caching uses `Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400`.
+
+### Fallback path
+
+If `/api/recap` returns **502** or the network fails, the client falls back to the original unauthenticated REST calls (`/users`, `/repos`, `/events/public`) so local `npm run dev` still works without the API.
+
+### Calendar-powered stats
+
+When contribution data is present:
+
+- Total contributions, longest + current streak, busiest weekday, and best month come from the **last 12 months** calendar
+- Peak hour still comes from public events (~90 days)
+- Private-only activity surfaces via `restrictedContributionsCount` on Ghost Mode / Quiet Mode and the share card
 
 ## Rate limits and caching
 
-GitHub’s unauthenticated cap is **60 requests/hour per IP**. Repo Recap stays at three endpoint types per username (events may paginate up to 3 pages) and never ships a token.
+- Authenticated API path: **5,000 requests/hour** (shared server token), with CDN cache per username
+- Unauthenticated fallback: GitHub’s **60 requests/hour per IP**
+- Combined payloads are cached in `localStorage` for **one hour**
+- 404s map to the not-found screen; 429s map to the rate-limit screen
 
-- Combined payloads are cached in `localStorage` for **one hour** (all access wrapped in try/catch if storage is blocked).
-- `X-RateLimit-Remaining` and `X-RateLimit-Reset` are read on every response. If the budget is spent, the UI shows when it resets.
-- 404s are not retried. Network errors may retry a couple of times.
+## Local setup
 
-## Scripts
+1. Copy a GitHub personal access token into `.env.local` (gitignored):
+
+   ```bash
+   GITHUB_TOKEN=your_token_here
+   ```
+
+2. Install and run:
 
 ```bash
 npm install
-npm run dev
+npm run dev        # Vite only — uses unauthenticated GitHub fallback
+npm run dev:api    # vercel dev — serves /api/recap with GITHUB_TOKEN
 npm test
 npm run test:e2e
 npm run build
 ```
 
-Open `/` or go directly to `/u/{username}`. Direct links work in production via the SPA fallback in `vercel.json`.
+Open `/` or go directly to `/u/{username}`. Direct links work in production via the SPA fallback in `vercel.json` (API routes excluded).
+
+Set `GITHUB_TOKEN` in the Vercel project environment for production — do not prefix it with `VITE_`.
 
 ## What I’d do next
 
-- A small serverless proxy with a GitHub token so recruiters and classrooms don’t share the 60/hour public budget.
-- The full contribution calendar via the GraphQL API (true year heatmap, not the ~90-day public events window).
-- Signed-in “this is me” mode for private-repo-aware recaps, still never exposing the token to the browser.
+- Signed-in “this is me” mode for private-repo-aware recaps that still never expose the token to the browser.
+- Optional recruiter/classroom deploy docs for rotating the server token.

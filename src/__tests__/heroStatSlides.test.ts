@@ -33,8 +33,14 @@ function props(overrides: Partial<RecapStats> = {}): SlideProps {
     totalPushEvents: 8,
     totalCommitsPushed: 12,
     longestStreak: 2,
+    currentStreak: 1,
     mostActiveRepoInWindow: { name: 'overreacted.io', eventCount: 9 },
     hasEventStats: true,
+    hasContributionStats: false,
+    totalContributions: 0,
+    privateContributions: 0,
+    bestMonth: null,
+    contributionWeeks: [],
     isEmptyProfile: false,
     ...overrides,
   }
@@ -74,8 +80,8 @@ describe('hero stat slides', () => {
     expect(html).toContain('days')
     expect(html).toContain('Most active repo')
     expect(html).toContain('overreacted.io')
-    expect(html).toContain('Commits pushed')
-    expect(html).toContain('12')
+    expect(html).toContain('Current streak')
+    expect(html).toContain('1 day')
     expect(html).toContain('<dt')
   })
 })

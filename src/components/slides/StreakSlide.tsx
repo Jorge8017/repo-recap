@@ -9,7 +9,9 @@ export function StreakSlide({ stats }: SlideProps) {
   if (!showStreak && !showCommits) return null
 
   const dayLabel = stats.longestStreak === 1 ? 'day' : 'days'
-  const announcementParts: string[] = ['Last 90 days']
+  const announcementParts: string[] = [
+    stats.hasContributionStats ? 'Last 12 months' : 'Last 90 days',
+  ]
   if (showStreak) {
     announcementParts.push(`longest streak ${stats.longestStreak} ${dayLabel}`)
   }
@@ -18,13 +20,19 @@ export function StreakSlide({ stats }: SlideProps) {
   }
 
   const details: Array<{ label: string; value: string }> = []
+  if (stats.currentStreak > 0 && showStreak) {
+    details.push({
+      label: 'Current streak',
+      value: `${stats.currentStreak} ${stats.currentStreak === 1 ? 'day' : 'days'}`,
+    })
+  }
   if (stats.mostActiveRepoInWindow) {
     details.push({
       label: 'Most active repo',
       value: stats.mostActiveRepoInWindow.name,
     })
   }
-  if (showCommits && showStreak) {
+  if (showCommits && showStreak && details.length < 2) {
     details.push({
       label: 'Commits pushed',
       value: formatCount(stats.totalCommitsPushed),

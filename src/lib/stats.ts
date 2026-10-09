@@ -1,5 +1,9 @@
 import type {
   ActiveRepo,
+  BestMonth,
+  ContributionDay,
+  ContributionWeek,
+  ContributionsSummary,
   GitHubEvent,
   GitHubRepo,
   GitHubUser,
@@ -17,6 +21,21 @@ export const WEEKDAYS = [
   'Thursday',
   'Friday',
   'Saturday',
+] as const
+
+const MONTH_LABELS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ] as const
 
 const MS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000
@@ -70,14 +89,117 @@ function localDayKey(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-function nextLocalDayKey(key: string): string {
+function nextDayKey(key: string): string {
   const [yearRaw, monthRaw, dayRaw] = key.split('-')
   const year = Number(yearRaw)
   const month = Number(monthRaw)
   const day = Number(dayRaw)
-  const date = new Date(year, month - 1, day)
-  date.setDate(date.getDate() + 1)
-  return localDayKey(date)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  date.setUTCDate(date.getUTCDate() + 1)
+  return date.toISOString().slice(0, 10)
+}
+
+function previousDayKey(key: string): string {
+  const [yearRaw, monthRaw, dayRaw] = key.split('-')
+  const year = Number(yearRaw)
+  const month = Number(monthRaw)
+  const day = Number(dayRaw)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  date.setUTCDate(date.getUTCDate() - 1)
+  return date.toISOString().slice(0, 10)
+}
+
+export function flattenContributionDays(
+  weeks: ContributionWeek[],
+): ContributionDay[] {
+  const days: ContributionDay[] = []
+  for (const week of weeks) {
+    for (const day of week.contributionDays) {
+      days.push(day)
+    }
+  }
+  return days.sort((a, b) => a.date.localeCompare(b.date))
+}
+
+export function longestContributionStreak(weeks: ContributionWeek[]): number {
+  const days = flattenContributionDays(weeks).filter(
+    (day) => day.contributionCount > 0,
+  )
+  if (days.length === 0) return 0
+
+  let best = 1
+  let current = 1
+  for (let index = 1; index < days.length; index += 1) {
+    const previous = days[index - 1]
+    const day = days[index]
+    if (!previous || !day) continue
+    if (day.date === nextDayKey(previous.date)) {
+      current += 1
+      if (current > best) best = current
+    } else {
+      current = 1
+    }
+  }
+  return best
+}
+
+export function currentContributionStreak(
+  weeks: ContributionWeek[],
+  todayKey: string,
+): number {
+  const active = new Set(
+    flattenContributionDays(weeks)
+      .filter((day) => day.contributionCount > 0)
+      .map((day) => day.date),
+  )
+  if (active.size === 0) return 0
+
+  let cursor = active.has(todayKey) ? todayKey : previousDayKey(todayKey)
+  if (!active.has(cursor)) return 0
+
+  let streak = 0
+  while (active.has(cursor)) {
+    streak += 1
+    cursor = previousDayKey(cursor)
+  }
+  return streak
+}
+
+export function busiestWeekdayFromCalendar(
+  weeks: ContributionWeek[],
+): string | null {
+  const counts = new Array<number>(7).fill(0)
+  for (const day of flattenContributionDays(weeks)) {
+    if (day.contributionCount <= 0) continue
+    const weekday = ((day.weekday % 7) + 7) % 7
+    counts[weekday] = (counts[weekday] ?? 0) + day.contributionCount
+  }
+  const index = busiestBucket(counts)
+  return index === null ? null : (WEEKDAYS[index] ?? null)
+}
+
+export function bestMonthFromCalendar(weeks: ContributionWeek[]): BestMonth | null {
+  const months = new Map<string, number>()
+  for (const day of flattenContributionDays(weeks)) {
+    if (day.contributionCount <= 0) continue
+    const key = day.date.slice(0, 7)
+    months.set(key, (months.get(key) ?? 0) + day.contributionCount)
+  }
+
+  let bestKey: string | null = null
+  let bestCount = 0
+  for (const [key, count] of months) {
+    if (count > bestCount || (count === bestCount && bestKey !== null && key < bestKey)) {
+      bestKey = key
+      bestCount = count
+    }
+  }
+  if (!bestKey || bestCount <= 0) return null
+
+  const [yearRaw, monthRaw] = bestKey.split('-')
+  const monthIndex = Number(monthRaw) - 1
+  const label = `${MONTH_LABELS[monthIndex] ?? monthRaw} ${yearRaw}`
+  return { label, count: bestCount, key: bestKey }
 }
 
 export function longestActiveStreak(events: GitHubEvent[]): number {
@@ -108,6 +230,16 @@ export function longestActiveStreak(events: GitHubEvent[]): number {
   }
 
   return best
+}
+
+function nextLocalDayKey(key: string): string {
+  const [yearRaw, monthRaw, dayRaw] = key.split('-')
+  const year = Number(yearRaw)
+  const month = Number(monthRaw)
+  const day = Number(dayRaw)
+  const date = new Date(year, month - 1, day)
+  date.setDate(date.getDate() + 1)
+  return localDayKey(date)
 }
 
 function busiestBucket(counts: number[]): number | null {
@@ -221,6 +353,7 @@ export function buildRecapStats(
   repos: GitHubRepo[],
   events: GitHubEvent[],
   now: Date = new Date(),
+  contributions: ContributionsSummary | null = null,
 ): RecapStats {
   const created = new Date(user.created_at)
   const createdMs = created.getTime()
@@ -251,10 +384,33 @@ export function buildRecapStats(
     }
   }
 
-  const busiestDayIndex = busiestBucket(dayCounts)
   const busiestHour = busiestBucket(hourCounts)
-  const busiestDay =
-    busiestDayIndex === null ? null : (WEEKDAYS[busiestDayIndex] ?? null)
+  const hasContributionStats = Boolean(contributions)
+  const weeks = contributions?.contributionCalendar.weeks ?? []
+  const todayKey = localDayKey(now)
+
+  const busiestDay = hasContributionStats
+    ? busiestWeekdayFromCalendar(weeks)
+    : (() => {
+        const busiestDayIndex = busiestBucket(dayCounts)
+        return busiestDayIndex === null
+          ? null
+          : (WEEKDAYS[busiestDayIndex] ?? null)
+      })()
+
+  const longestStreak = hasContributionStats
+    ? longestContributionStreak(weeks)
+    : longestActiveStreak(events)
+  const currentStreak = hasContributionStats
+    ? currentContributionStreak(weeks, todayKey)
+    : 0
+
+  if (hasContributionStats && contributions) {
+    totalCommitsPushed = Math.max(
+      totalCommitsPushed,
+      contributions.totalCommitContributions,
+    )
+  }
 
   return {
     username: user.login,
@@ -274,9 +430,15 @@ export function buildRecapStats(
     busiestHour,
     totalPushEvents,
     totalCommitsPushed,
-    longestStreak: longestActiveStreak(events),
+    longestStreak,
+    currentStreak,
     mostActiveRepoInWindow: mostActiveRepoFromEvents(events),
     hasEventStats: events.length > 0,
+    hasContributionStats,
+    totalContributions: contributions?.contributionCalendar.totalContributions ?? 0,
+    privateContributions: contributions?.restrictedContributionsCount ?? 0,
+    bestMonth: hasContributionStats ? bestMonthFromCalendar(weeks) : null,
+    contributionWeeks: weeks,
     isEmptyProfile: user.public_repos === 0 && events.length === 0,
   }
 }

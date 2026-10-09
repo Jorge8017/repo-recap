@@ -28,6 +28,7 @@ export function useFitText(
     if (!parent) return
 
     let cancelled = false
+    let frame = 0
 
     const apply = () => {
       if (cancelled) return
@@ -51,15 +52,20 @@ export function useFitText(
         el.style.overflowWrap = 'anywhere'
       }
 
-      setSize(next)
+      setSize((prev) => (prev === next ? prev : next))
+    }
+
+    const schedule = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(apply)
     }
 
     apply()
 
-    const observer = new ResizeObserver(apply)
+    const observer = new ResizeObserver(schedule)
     observer.observe(parent)
 
-    const mutations = new MutationObserver(apply)
+    const mutations = new MutationObserver(schedule)
     mutations.observe(el, {
       characterData: true,
       childList: true,
@@ -69,12 +75,13 @@ export function useFitText(
     const fonts = document.fonts
     if (fonts?.ready) {
       void fonts.ready.then(() => {
-        apply()
+        schedule()
       })
     }
 
     return () => {
       cancelled = true
+      cancelAnimationFrame(frame)
       observer.disconnect()
       mutations.disconnect()
     }

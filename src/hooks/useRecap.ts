@@ -1,5 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchRecapData, shouldRetryGitHubQuery } from '../api/github'
+import {
+  fetchRecapFromApi,
+  shouldFallbackToDirectGitHub,
+} from '../api/recapClient'
 import { readCache, writeCache } from '../lib/cache'
 import { assignPersonality } from '../lib/personality'
 import { buildRecapStats } from '../lib/stats'
@@ -7,7 +11,13 @@ import { isValidGitHubUsername, normalizeUsername } from '../lib/username'
 import type { CachedRecapPayload, RecapResult } from '../types'
 
 function assemble(payload: CachedRecapPayload): RecapResult {
-  const stats = buildRecapStats(payload.user, payload.repos, payload.events)
+  const stats = buildRecapStats(
+    payload.user,
+    payload.repos,
+    payload.events,
+    new Date(),
+    payload.contributions ?? null,
+  )
   return {
     stats,
     personality: assignPersonality(stats),
@@ -19,6 +29,16 @@ export async function loadRecap(username: string): Promise<RecapResult> {
   const cached = readCache<CachedRecapPayload>(key)
   if (cached) {
     return assemble(cached)
+  }
+
+  try {
+    const payload = await fetchRecapFromApi(username)
+    writeCache(key, payload)
+    return assemble(payload)
+  } catch (error) {
+    if (!shouldFallbackToDirectGitHub(error)) {
+      throw error
+    }
   }
 
   const payload = await fetchRecapData(username)

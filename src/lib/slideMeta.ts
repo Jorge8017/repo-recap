@@ -3,11 +3,12 @@ import type { SlideId } from '../types'
 export const SLIDE_CATALOG: Record<SlideId, string> = {
   intro: 'Repo Recap',
   age: 'Account age',
+  year: 'Your year',
   quiet: 'Quiet Mode',
   totals: 'Public catalog',
   languages: 'Languages',
-  busiest: 'Last 90 days',
-  streak: 'Last 90 days',
+  busiest: 'Last 12 months',
+  streak: 'Last 12 months',
   starred: 'Crowd favorite',
   personality: 'The reveal',
   summary: 'Your card',
@@ -17,6 +18,7 @@ export const SLIDE_STAGE_GLOW: Record<SlideId, string> = {
   intro:
     'radial-gradient(700px 520px at 50% 40%, rgba(122,45,74,0.38), transparent 70%)',
   age: 'radial-gradient(700px 520px at 50% 50%, rgba(42,143,134,0.32), transparent 70%)',
+  year: 'radial-gradient(700px 520px at 50% 50%, rgba(217,94,60,0.34), transparent 70%)',
   quiet:
     'radial-gradient(700px 520px at 50% 50%, rgba(92,107,136,0.28), transparent 70%)',
   totals:

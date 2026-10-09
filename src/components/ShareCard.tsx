@@ -173,7 +173,14 @@ export function ShareCard({
                 value={formatAccountAge(stats.accountAgeYears)}
               />
               <ShareStat label="Joined" value={String(stats.joinYear)} />
-              <ShareStat label="Public repos" value="Private" />
+              <ShareStat
+                label={stats.privateContributions > 0 ? 'Private' : 'Public repos'}
+                value={
+                  stats.privateContributions > 0
+                    ? `${formatCount(stats.privateContributions)} this year`
+                    : 'Private'
+                }
+              />
             </>
           ) : null}
           {showStars ? (

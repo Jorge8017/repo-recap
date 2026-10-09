@@ -9,6 +9,7 @@ import { QuietSlide } from './QuietSlide'
 import { StarredSlide } from './StarredSlide'
 import { StreakSlide } from './StreakSlide'
 import { TotalsSlide } from './TotalsSlide'
+import { YearSlide } from './YearSlide'
 
 export const SLIDE_COMPONENTS: Record<
   Exclude<SlideId, 'summary'>,
@@ -16,6 +17,7 @@ export const SLIDE_COMPONENTS: Record<
 > = {
   intro: IntroSlide,
   age: AgeSlide,
+  year: YearSlide,
   quiet: QuietSlide,
   totals: TotalsSlide,
   languages: LanguagesSlide,

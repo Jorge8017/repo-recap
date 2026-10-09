@@ -1,12 +1,23 @@
 import { motion } from 'framer-motion'
+import { formatCount } from '../../lib/stats'
 import type { SlideProps } from '../../types'
 import { PersonalityIcon } from '../PersonalityIcon'
 import { Headline, SlideShell } from './SlideShell'
 
-export function QuietSlide({ reducedMotion }: SlideProps) {
+export function QuietSlide({ stats, reducedMotion }: SlideProps) {
+  const privateCount = stats.privateContributions
+  const hasPrivate = privateCount > 0
+  const privateLine = hasPrivate
+    ? `${formatCount(privateCount)} private contribution${privateCount === 1 ? '' : 's'} this year`
+    : null
+
   return (
     <SlideShell
-      announcement="Your public profile is a blank canvas. Most work happens in private repos — publish a project to unlock your full recap."
+      announcement={
+        hasPrivate
+          ? `Your public profile is a blank canvas. ${privateLine}.`
+          : 'Your public profile is a blank canvas. Most work happens in private repos — publish a project to unlock your full recap.'
+      }
       gradient="bg-gradient-to-br from-[#12151c] via-[#2a3348] to-[#5c6b88]"
     >
       <motion.div
@@ -19,6 +30,11 @@ export function QuietSlide({ reducedMotion }: SlideProps) {
         <PersonalityIcon id="ghost-mode" size={72} />
       </motion.div>
       <Headline>Your public profile is a blank canvas.</Headline>
+      {hasPrivate ? (
+        <p className="mt-5 max-w-[26ch] text-lg leading-snug text-[#F2C46D]">
+          {privateLine}.
+        </p>
+      ) : null}
       <p className="mt-5 max-w-[24ch] text-lg leading-snug text-white/80">
         Most work happens in private repos — publish a project to unlock your
         full recap.

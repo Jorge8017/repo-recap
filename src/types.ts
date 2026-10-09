@@ -37,10 +37,35 @@ export interface GitHubEvent {
   payload: GitHubEventPayload
 }
 
+export interface ContributionDay {
+  date: string
+  contributionCount: number
+  weekday: number
+}
+
+export interface ContributionWeek {
+  contributionDays: ContributionDay[]
+}
+
+export interface ContributionCalendar {
+  totalContributions: number
+  weeks: ContributionWeek[]
+}
+
+export interface ContributionsSummary {
+  totalCommitContributions: number
+  totalPullRequestContributions: number
+  totalIssueContributions: number
+  totalPullRequestReviewContributions: number
+  restrictedContributionsCount: number
+  contributionCalendar: ContributionCalendar
+}
+
 export interface CachedRecapPayload {
   user: GitHubUser
   repos: GitHubRepo[]
   events: GitHubEvent[]
+  contributions?: ContributionsSummary | null
 }
 
 export interface LanguageStat {
@@ -67,6 +92,12 @@ export interface ActiveRepo {
   eventCount: number
 }
 
+export interface BestMonth {
+  label: string
+  count: number
+  key: string
+}
+
 export interface RecapStats {
   username: string
   displayName: string
@@ -86,8 +117,14 @@ export interface RecapStats {
   totalPushEvents: number
   totalCommitsPushed: number
   longestStreak: number
+  currentStreak: number
   mostActiveRepoInWindow: ActiveRepo | null
   hasEventStats: boolean
+  hasContributionStats: boolean
+  totalContributions: number
+  privateContributions: number
+  bestMonth: BestMonth | null
+  contributionWeeks: ContributionWeek[]
   isEmptyProfile: boolean
 }
 
@@ -110,6 +147,7 @@ export interface Personality {
 export type SlideId =
   | 'intro'
   | 'age'
+  | 'year'
   | 'quiet'
   | 'totals'
   | 'languages'
@@ -132,3 +170,10 @@ export interface SlideProps {
 }
 
 export type GitHubErrorCode = 'not_found' | 'rate_limit' | 'http' | 'network'
+
+export type ApiRecapErrorCode = 'not_found' | 'rate_limited' | 'upstream' | 'invalid_username'
+
+export interface ApiRecapErrorBody {
+  error: ApiRecapErrorCode
+  resetAt?: string
+}

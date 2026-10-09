@@ -57,11 +57,70 @@ const wideFixture = {
   ],
 }
 
-async function mockGitHub(
+function wednesdayWeeks() {
+  const weeks = []
+  for (let week = 0; week < 53; week += 1) {
+    const contributionDays = []
+    for (let weekday = 0; weekday < 7; weekday += 1) {
+      const start = Date.UTC(2023, 5, 4)
+      const ms = start + (week * 7 + weekday) * 24 * 60 * 60 * 1000
+      const date = new Date(ms).toISOString().slice(0, 10)
+      contributionDays.push({
+        date,
+        contributionCount: weekday === 3 ? 4 : weekday === 1 ? 1 : 0,
+        weekday,
+      })
+    }
+    weeks.push({ contributionDays })
+  }
+  return weeks
+}
+
+function apiPayloadFromRest(payload: typeof fixture | typeof wideFixture) {
+  return {
+    user: payload.user,
+    repos: payload.repos,
+    events: payload.events,
+    contributions: {
+      totalCommitContributions: 40,
+      totalPullRequestContributions: 2,
+      totalIssueContributions: 1,
+      totalPullRequestReviewContributions: 0,
+      restrictedContributionsCount: 0,
+      contributionCalendar: {
+        totalContributions: 120,
+        weeks: wednesdayWeeks(),
+      },
+    },
+  }
+}
+
+async function mockRecapApi(
   page: Page,
-  payload: typeof fixture = fixture,
+  payload: typeof fixture | typeof wideFixture,
 ) {
   const login = payload.user.login
+
+  await page.route('**/api/recap?*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+      body: JSON.stringify(apiPayloadFromRest(payload)),
+    })
+  })
+  await page.route('**/api/recap', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+      body: JSON.stringify(apiPayloadFromRest(payload)),
+    })
+  })
 
   await page.route('https://avatars.githubusercontent.com/**', async (route) => {
     await route.fulfill({
@@ -113,7 +172,7 @@ async function mockGitHub(
 }
 
 async function goToSlideWithText(page: Page, text: string) {
-  for (let step = 0; step < 14; step += 1) {
+  for (let step = 0; step < 16; step += 1) {
     if (await page.getByText(text, { exact: false }).first().isVisible()) {
       return
     }
@@ -140,9 +199,9 @@ test('plays a mocked recap through to the downloadable share card', async ({
   page,
   context,
 }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  await mockGitHub(page)
+  await mockRecapApi(page, fixture)
   await page.goto('/')
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
 
   await page.getByLabel('GitHub username').fill('octocat')
   await page.getByRole('button', { name: 'Generate recap' }).click()
@@ -153,7 +212,7 @@ test('plays a mocked recap through to the downloadable share card', async ({
     timeout: 15_000,
   })
 
-  for (let step = 0; step < 12; step += 1) {
+  for (let step = 0; step < 14; step += 1) {
     await page.keyboard.press('ArrowRight')
   }
 
@@ -180,7 +239,7 @@ test.describe('long hero values', () => {
     page,
   }) => {
     expect(LONG_REPO).toHaveLength(30)
-    await mockGitHub(page, wideFixture)
+    await mockRecapApi(page, wideFixture)
     await page.goto('/u/wideuser')
 
     await expect(

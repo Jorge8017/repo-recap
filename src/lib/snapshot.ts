@@ -31,8 +31,17 @@ export function buildSnapshotTiles(stats: RecapStats): SnapshotTile[] {
     tiles.push({ label: 'Top language', value: topLanguage })
   }
 
+  if (stats.totalContributions > 0) {
+    tiles.push({
+      label: 'Contributions · 12mo',
+      value: formatCount(stats.totalContributions),
+    })
+  }
   if (stats.busiestDay) {
-    tiles.push({ label: 'Peak day · 90d', value: stats.busiestDay })
+    tiles.push({
+      label: stats.hasContributionStats ? 'Peak day · 12mo' : 'Peak day · 90d',
+      value: stats.busiestDay,
+    })
   }
   if (stats.busiestHour !== null) {
     tiles.push({
@@ -42,14 +51,20 @@ export function buildSnapshotTiles(stats: RecapStats): SnapshotTile[] {
   }
   if (stats.longestStreak > 0) {
     tiles.push({
-      label: 'Streak · 90d',
+      label: stats.hasContributionStats ? 'Streak · 12mo' : 'Streak · 90d',
       value: `${stats.longestStreak} ${stats.longestStreak === 1 ? 'day' : 'days'}`,
     })
   }
   if (stats.totalCommitsPushed > 0) {
     tiles.push({
-      label: 'Commits · 90d',
+      label: stats.hasContributionStats ? 'Commits · 12mo' : 'Commits · 90d',
       value: formatCount(stats.totalCommitsPushed),
+    })
+  }
+  if (stats.privateContributions > 0) {
+    tiles.push({
+      label: 'Private · 12mo',
+      value: formatCount(stats.privateContributions),
     })
   }
   if (stats.mostStarredRepo && stats.mostStarredRepo.stars > 0) {
