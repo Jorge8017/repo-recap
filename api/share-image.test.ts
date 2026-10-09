@@ -17,7 +17,7 @@ const { TINY_PNG_DATA_URI, fakePngBuffer, createOgImageResponse } = vi.hoisted(
     return {
       TINY_PNG_DATA_URI: `data:image/png;base64,${header.toString('base64')}`,
       fakePngBuffer,
-      createOgImageResponse: vi.fn(() => ({
+      createOgImageResponse: vi.fn(async () => ({
         arrayBuffer: async () =>
           fakePngBuffer.buffer.slice(
             fakePngBuffer.byteOffset,

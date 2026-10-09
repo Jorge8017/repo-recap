@@ -73,27 +73,34 @@ export default async function handler(
     return
   }
 
-  const avatarDataUri = await fetchAvatarDataUri(
-    result.body.user.avatar_url,
-    token,
-  )
-  const element = buildShareCardElement(result.body, avatarDataUri)
-  const image = createOgImageResponse(element, {
-    width: SHARE_IMAGE_WIDTH,
-    height: SHARE_IMAGE_HEIGHT,
-    fonts: loadShareFonts(),
-  })
+  try {
+    const avatarDataUri = await fetchAvatarDataUri(
+      result.body.user.avatar_url,
+      token,
+    )
+    const element = buildShareCardElement(result.body, avatarDataUri)
+    const image = await createOgImageResponse(element, {
+      width: SHARE_IMAGE_WIDTH,
+      height: SHARE_IMAGE_HEIGHT,
+      fonts: loadShareFonts(),
+    })
 
-  const buffer = Buffer.from(await image.arrayBuffer())
-  const bodyText = buffer.toString('utf8')
-  if (token && bodyText.includes(token)) {
-    sendError(res, 404)
-    return
+    const buffer = Buffer.from(await image.arrayBuffer())
+    if (token && buffer.toString('utf8').includes(token)) {
+      sendError(res, 404)
+      return
+    }
+
+    res.status(200)
+    res.setHeader('Content-Type', 'image/png')
+    res.setHeader('Cache-Control', CACHE_OK)
+    res.setHeader('Vary', 'Accept-Encoding')
+    res.send(buffer)
+  } catch (error) {
+    console.error('share-image failed', error)
+    res.status(500)
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-store')
+    res.send('Internal Server Error')
   }
-
-  res.status(200)
-  res.setHeader('Content-Type', 'image/png')
-  res.setHeader('Cache-Control', CACHE_OK)
-  res.setHeader('Vary', 'Accept-Encoding')
-  res.send(buffer)
 }

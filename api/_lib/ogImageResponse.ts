@@ -1,17 +1,17 @@
-import { createRequire } from 'node:module'
 import type { ReactElement } from 'react'
+import type { ImageResponse as ImageResponseType } from '@vercel/og'
 
-const require = createRequire(import.meta.url)
+type ImageResponseOptions = ConstructorParameters<typeof ImageResponseType>[1]
 
-// @vercel/og's ESM entry breaks under Node ESM (dynamic require of fs).
-// createRequire loads the Node build the same way Vercel serverless does.
-const { ImageResponse } = require('@vercel/og') as typeof import('@vercel/og')
-
-export type { ImageResponse }
-
-export function createOgImageResponse(
+/**
+ * Load @vercel/og via dynamic import.
+ * Vercel compiles api/ to CJS; createRequire() cannot load the ESM-only package
+ * (ERR_REQUIRE_ESM). Dynamic import() works from that CJS wrapper.
+ */
+export async function createOgImageResponse(
   element: ReactElement,
-  options: ConstructorParameters<typeof ImageResponse>[1],
-): InstanceType<typeof ImageResponse> {
+  options: ImageResponseOptions,
+): Promise<InstanceType<typeof ImageResponseType>> {
+  const { ImageResponse } = await import('@vercel/og')
   return new ImageResponse(element, options)
 }

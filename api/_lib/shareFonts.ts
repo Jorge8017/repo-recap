@@ -17,11 +17,22 @@ function toArrayBuffer(buffer: Buffer): ArrayBuffer {
   return copy.buffer
 }
 
+function resolveFontsDir(): string {
+  const besideLib = join(dirname(fileURLToPath(import.meta.url)), '../_fonts')
+  try {
+    readFileSync(join(besideLib, 'SpaceGrotesk-400.ttf'))
+    return besideLib
+  } catch {
+    // Vercel includeFiles may place assets at the deployment cwd.
+    return join(process.cwd(), 'api/_fonts')
+  }
+}
+
 /** Load bundled TTFs once (no network font loading). */
 export function loadShareFonts(): ShareFont[] {
   if (cached) return cached
 
-  const fontsDir = join(dirname(fileURLToPath(import.meta.url)), '../_fonts')
+  const fontsDir = resolveFontsDir()
   const read = (name: string) => toArrayBuffer(readFileSync(join(fontsDir, name)))
 
   cached = [
