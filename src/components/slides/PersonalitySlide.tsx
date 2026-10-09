@@ -1,9 +1,14 @@
 import { motion } from 'framer-motion'
+import { useRef } from 'react'
+import { useFitText } from '../../hooks/useFitText'
 import type { SlideProps } from '../../types'
 import { PersonalityIcon } from '../PersonalityIcon'
-import { Headline, SlideShell } from './SlideShell'
+import { SlideShell } from './SlideShell'
 
 export function PersonalitySlide({ personality, reducedMotion }: SlideProps) {
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  useFitText(titleRef, 64, 28)
+
   return (
     <SlideShell
       announcement={`Personality: ${personality.title}. ${personality.description}`}
@@ -23,7 +28,18 @@ export function PersonalitySlide({ personality, reducedMotion }: SlideProps) {
         <PersonalityIcon id={personality.id} size={72} />
       </motion.div>
       <p className="mb-2 text-xl text-white/80">If this recap had a name</p>
-      <Headline>{personality.title}</Headline>
+      <h2
+        ref={titleRef}
+        className="min-w-0 max-w-full font-bold tracking-[-0.02em] text-[#F4EDE2]"
+        style={{
+          display: 'inline-block',
+          maxWidth: '100%',
+          whiteSpace: 'nowrap',
+          fontSize: 64,
+        }}
+      >
+        {personality.title}
+      </h2>
       <p className="mt-5 max-w-[22ch] text-lg leading-snug text-[#D7C7E6]">
         {personality.description}
       </p>

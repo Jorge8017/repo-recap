@@ -1,3 +1,6 @@
+import { useRef } from 'react'
+import { useFitText } from '../../hooks/useFitText'
+
 interface HeroStatSlideProps {
   lead: string
   value: string
@@ -11,26 +14,39 @@ export function HeroStatSlide({
   unit,
   details,
 }: HeroStatSlideProps) {
-  const compact = value.length > 6
+  const valueRef = useRef<HTMLSpanElement>(null)
+  const valueSize = useFitText(valueRef, 96, 40)
+  const unitSize = Math.max(18, valueSize / 3)
   const items = details?.filter((item) => item.value.length > 0) ?? []
 
   return (
-    <div className="shrink-0">
+    <div className="w-full min-w-0">
       <p className="text-[24px] font-normal text-[#C9BFD6]">{lead}</p>
-      <p className="mt-2 flex items-baseline gap-3 whitespace-nowrap">
-        <span
-          className={`leading-none font-bold tracking-[-0.04em] text-[#F4EDE2] ${
-            compact ? 'text-[72px]' : 'text-[96px]'
-          }`}
-        >
-          {value}
+      <div className="mt-2 flex min-w-0 max-w-full items-baseline gap-3">
+        <span className="min-w-0 flex-1 basis-0 overflow-hidden">
+          <span
+            ref={valueRef}
+            data-testid="hero-stat-value"
+            className="leading-none font-bold tracking-[-0.04em] text-[#F4EDE2]"
+            style={{
+              display: 'inline-block',
+              maxWidth: '100%',
+              whiteSpace: 'nowrap',
+              fontSize: valueSize,
+            }}
+          >
+            {value}
+          </span>
         </span>
         {unit ? (
-          <span className="text-[32px] leading-none font-bold text-[#F4EDE2]">
+          <span
+            className="shrink-0 leading-none font-bold text-[#F4EDE2]"
+            style={{ fontSize: unitSize }}
+          >
             {unit}
           </span>
         ) : null}
-      </p>
+      </div>
       {items.length > 0 ? (
         <dl className="mt-8 flex gap-8 border-t border-current/18 pt-4">
           {items.map((item) => (

@@ -51,7 +51,6 @@ describe('hero stat slides', () => {
   it('renders account age value and joined details', () => {
     const html = renderToStaticMarkup(createElement(AgeSlide, props()))
     expect(html).toContain('Building in public for')
-    expect(html).toContain('text-[96px]')
     expect(html).toContain('>15<')
     expect(html).toContain('years')
     expect(html).toContain('Joined')
@@ -63,7 +62,6 @@ describe('hero stat slides', () => {
     const html = renderToStaticMarkup(createElement(BusiestSlide, props()))
     expect(html).toContain('You light up on')
     expect(html).toContain('Fridays')
-    expect(html).toContain('text-[72px]')
     expect(html).toContain('Peak hour')
     expect(html).toContain('10:00 PM')
     expect(html).toContain('<dt')

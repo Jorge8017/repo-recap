@@ -268,6 +268,7 @@ export function StoryPlayer({
 
             <div
               ref={cardRef}
+              data-testid="story-card"
               className="relative flex h-full w-full min-h-0 flex-col overflow-hidden lg:h-[min(746px,100%)] lg:w-[420px] lg:rounded-[32px] lg:shadow-[0_50px_100px_rgba(0,0,0,0.55)]"
               onPointerDown={onPointerDown}
               onPointerUp={onPointerUp}
