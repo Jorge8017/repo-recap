@@ -37,8 +37,8 @@ export function ShareCard({
         fontFamily: "'Space Grotesk', ui-sans-serif, system-ui, sans-serif",
         padding: 81,
         boxSizing: 'border-box',
-        background:
-          'radial-gradient(810px 675px at 85% 10%, rgba(199,92,255,0.45), transparent 70%), radial-gradient(675px 585px at 0% 100%, rgba(217,94,60,0.35), transparent 70%), linear-gradient(170deg, #3A1250, #1B0A2B)',
+        backgroundImage:
+          'radial-gradient(810px 675px at 85% 10%, rgba(199,92,255,0.45) 0%, rgba(199,92,255,0.18) 35%, rgba(199,92,255,0) 70%), radial-gradient(675px 585px at 0% 100%, rgba(217,94,60,0.35) 0%, rgba(217,94,60,0.14) 35%, rgba(217,94,60,0) 70%), linear-gradient(170deg, #3A1250, #1B0A2B)',
       }}
     >
       <div className="flex items-center justify-between">

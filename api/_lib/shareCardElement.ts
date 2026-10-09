@@ -14,6 +14,13 @@ export const SHARE_IMAGE_WIDTH = 1080
 export const SHARE_IMAGE_HEIGHT = 1350
 export const SHARE_IMAGE_FOOTER = 'recap.jordanshears.com'
 
+/** Soft glows via gradients only — Satori has no CSS blur / filter support. */
+export const SHARE_CARD_BACKGROUND_IMAGE = [
+  'radial-gradient(810px 675px at 85% 10%, rgba(199,92,255,0.45) 0%, rgba(199,92,255,0.18) 35%, rgba(199,92,255,0) 70%)',
+  'radial-gradient(675px 585px at 0% 100%, rgba(217,94,60,0.35) 0%, rgba(217,94,60,0.14) 35%, rgba(217,94,60,0) 70%)',
+  'linear-gradient(170deg, #3A1250, #1B0A2B)',
+].join(', ')
+
 export type ShareStatItem = { label: string; value: string }
 
 export function titleFontSize(title: string): number {
@@ -107,10 +114,6 @@ export function buildShareCardModel(
     restPercent: Math.max(0, 100 - used),
     ghostMode,
   }
-}
-
-function glow(style: Record<string, string | number>) {
-  return h('div', { style: { display: 'flex', ...style } })
 }
 
 /** Satori-friendly React tree matching the in-app ShareCard layout. */
@@ -291,31 +294,12 @@ export function buildShareCardElement(
         justifyContent: 'space-between',
         padding: 81,
         boxSizing: 'border-box',
-        position: 'relative',
         overflow: 'hidden',
         fontFamily: 'Space Grotesk',
         color: '#F4EDE2',
-        background: 'linear-gradient(170deg, #3A1250, #1B0A2B)',
+        backgroundImage: SHARE_CARD_BACKGROUND_IMAGE,
       },
     },
-    glow({
-      position: 'absolute',
-      width: 810,
-      height: 675,
-      right: -120,
-      top: -80,
-      borderRadius: 9999,
-      background: 'rgba(199,92,255,0.45)',
-    }),
-    glow({
-      position: 'absolute',
-      width: 675,
-      height: 585,
-      left: -200,
-      bottom: -120,
-      borderRadius: 9999,
-      background: 'rgba(217,94,60,0.35)',
-    }),
     h(
       'div',
       {
@@ -324,7 +308,6 @@ export function buildShareCardElement(
           width: '100%',
           alignItems: 'center',
           justifyContent: 'space-between',
-          position: 'relative',
         },
       },
       h(
@@ -399,7 +382,6 @@ export function buildShareCardElement(
           flexDirection: 'column',
           gap: 22,
           width: '100%',
-          position: 'relative',
         },
       },
       h('img', {
@@ -445,7 +427,6 @@ export function buildShareCardElement(
           flexDirection: 'column',
           gap: 40,
           width: '100%',
-          position: 'relative',
         },
       },
       statsRow,
