@@ -17,7 +17,7 @@ import {
   toastForShareError,
   withShareTimeout,
 } from '../../lib/share'
-import { recapHref, siteHost } from '../../lib/site'
+import { recapHref, siteOrigin } from '../../lib/site'
 import type { SlideProps } from '../../types'
 import {
   SHARE_CARD_HEIGHT,
@@ -42,7 +42,7 @@ export function SummarySlide({
   const [downloading, setDownloading] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const host = siteHost()
+  const origin = siteOrigin()
 
   const showToast = (message: string) => {
     setToast(message)
@@ -153,7 +153,7 @@ export function SummarySlide({
             stats={stats}
             personality={personality}
             avatarSrc={avatarSrc}
-            siteHost={host}
+            siteOrigin={origin}
           />
         </div>
       </div>
@@ -184,7 +184,7 @@ export function SummarySlide({
                 stats={stats}
                 personality={personality}
                 avatarSrc={avatarSrc}
-                siteHost={host}
+                siteOrigin={origin}
               />
             </div>
           </div>

@@ -2,6 +2,8 @@
 
 A story-style, animated yearly recap for any **public GitHub profile**. No login, no token, no analytics — open a username and play the reel.
 
+Live: https://recap.jordanshears.com
+
 ## Screenshots
 
 ![Landing](docs/landing.png)

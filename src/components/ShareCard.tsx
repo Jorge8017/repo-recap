@@ -9,14 +9,14 @@ interface ShareCardProps {
   stats: RecapStats
   personality: Personality
   avatarSrc: string
-  siteHost: string
+  siteOrigin: string
 }
 
 export function ShareCard({
   stats,
   personality,
   avatarSrc,
-  siteHost,
+  siteOrigin,
 }: ShareCardProps) {
   const languages = stats.topLanguages.slice(0, 3)
   const showStars = stats.totalStars > 0
@@ -129,7 +129,7 @@ export function ShareCard({
           made with {SITE_NAME}
         </p>
         <p className="font-medium text-[#f0c27a]" style={{ fontSize: 22, marginTop: 6 }}>
-          {siteHost}
+          {siteOrigin}
         </p>
       </div>
     </div>

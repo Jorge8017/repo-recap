@@ -1,8 +1,9 @@
 export const SITE_NAME = 'Repo Recap'
+export const LIVE_ORIGIN = 'https://recap.jordanshears.com'
 
-export function siteHost(): string {
-  if (typeof window === 'undefined') return 'reporecap.app'
-  return window.location.host
+export function siteOrigin(): string {
+  if (typeof window === 'undefined') return LIVE_ORIGIN
+  return window.location.origin
 }
 
 export function recapPath(username: string): string {
@@ -10,6 +11,5 @@ export function recapPath(username: string): string {
 }
 
 export function recapHref(username: string): string {
-  if (typeof window === 'undefined') return recapPath(username)
-  return `${window.location.origin}${recapPath(username)}`
+  return `${siteOrigin()}${recapPath(username)}`
 }
