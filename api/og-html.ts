@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { buildAuthenticatedRecap } from './_lib/github.js'
 import { assignPersonality } from '../src/lib/personality.js'
 import { buildRecapStats } from '../src/lib/stats.js'
+import { buildCompareScore } from '../src/lib/compare.js'
 
 const SITE = 'https://recap.jordanshears.com'
 
@@ -34,50 +35,16 @@ function sendPlain(res: VercelResponse, status: number, body: string): void {
   res.send(body)
 }
 
-export default async function handler(
-  req: VercelRequest,
+function sendOgHtml(
   res: VercelResponse,
-): Promise<void> {
-  if (req.method && req.method !== 'GET') {
-    sendPlain(res, 405, 'Method Not Allowed')
-    return
-  }
-
-  const token = process.env.GITHUB_TOKEN
-  const result = await buildAuthenticatedRecap(readQuery(req, 'u'), token)
-
-  if (result.status === 400) {
-    sendPlain(res, 400, 'Bad Request')
-    return
-  }
-  if (result.status === 404) {
-    sendPlain(res, 404, 'Not Found')
-    return
-  }
-  if (result.status === 429) {
-    sendPlain(res, 429, 'Too Many Requests')
-    return
-  }
-  if (result.status !== 200) {
-    sendPlain(res, 404, 'Not Found')
-    return
-  }
-
-  const stats = buildRecapStats(
-    result.body.user,
-    result.body.repos,
-    result.body.events,
-    new Date(),
-    result.body.contributions ?? null,
-  )
-  const personality = assignPersonality(stats)
-  const name = stats.displayName || stats.username
-  const username = stats.username
-  const title = `${name}'s Repo Recap`
-  const description = personality.title
-  const image = `${SITE}/api/share-image?u=${encodeURIComponent(username)}`
-  const pageUrl = `${SITE}/u/${encodeURIComponent(username)}`
-
+  options: {
+    title: string
+    description: string
+    image: string
+    pageUrl: string
+  },
+): void {
+  const { title, description, image, pageUrl } = options
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -108,4 +75,94 @@ export default async function handler(
     'public, s-maxage=21600, stale-while-revalidate=86400',
   )
   res.send(html)
+}
+
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse,
+): Promise<void> {
+  if (req.method && req.method !== 'GET') {
+    sendPlain(res, 405, 'Method Not Allowed')
+    return
+  }
+
+  const token = process.env.GITHUB_TOKEN
+  const userA = readQuery(req, 'a')
+  const userB = readQuery(req, 'b')
+
+  if (userA && userB) {
+    const [resultA, resultB] = await Promise.all([
+      buildAuthenticatedRecap(userA, token),
+      buildAuthenticatedRecap(userB, token),
+    ])
+    if (resultA.status !== 200) {
+      sendPlain(res, resultA.status === 400 ? 400 : 404, 'Not Found')
+      return
+    }
+    if (resultB.status !== 200) {
+      sendPlain(res, resultB.status === 400 ? 400 : 404, 'Not Found')
+      return
+    }
+
+    const statsA = buildRecapStats(
+      resultA.body.user,
+      resultA.body.repos,
+      resultA.body.events,
+      new Date(),
+      resultA.body.contributions ?? null,
+    )
+    const statsB = buildRecapStats(
+      resultB.body.user,
+      resultB.body.repos,
+      resultB.body.events,
+      new Date(),
+      resultB.body.contributions ?? null,
+    )
+    const score = buildCompareScore(statsA, statsB)
+    const aLogin = statsA.username
+    const bLogin = statsB.username
+    sendOgHtml(res, {
+      title: `@${aLogin} vs @${bLogin}`,
+      description: score.headline,
+      image: `${SITE}/api/compare-image?a=${encodeURIComponent(aLogin)}&b=${encodeURIComponent(bLogin)}`,
+      pageUrl: `${SITE}/vs/${encodeURIComponent(aLogin)}/${encodeURIComponent(bLogin)}`,
+    })
+    return
+  }
+
+  const result = await buildAuthenticatedRecap(readQuery(req, 'u'), token)
+
+  if (result.status === 400) {
+    sendPlain(res, 400, 'Bad Request')
+    return
+  }
+  if (result.status === 404) {
+    sendPlain(res, 404, 'Not Found')
+    return
+  }
+  if (result.status === 429) {
+    sendPlain(res, 429, 'Too Many Requests')
+    return
+  }
+  if (result.status !== 200) {
+    sendPlain(res, 404, 'Not Found')
+    return
+  }
+
+  const stats = buildRecapStats(
+    result.body.user,
+    result.body.repos,
+    result.body.events,
+    new Date(),
+    result.body.contributions ?? null,
+  )
+  const personality = assignPersonality(stats)
+  const name = stats.displayName || stats.username
+  const username = stats.username
+  sendOgHtml(res, {
+    title: `${name}'s Repo Recap`,
+    description: personality.title,
+    image: `${SITE}/api/share-image?u=${encodeURIComponent(username)}`,
+    pageUrl: `${SITE}/u/${encodeURIComponent(username)}`,
+  })
 }

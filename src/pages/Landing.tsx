@@ -13,6 +13,8 @@ const GEORGE_URL = 'https://jordanshears.com'
 export function Landing() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
+  const [vsUsername, setVsUsername] = useState('')
+  const [compareOpen, setCompareOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -29,8 +31,27 @@ export function Landing() {
     navigate(`/u/${encodeURIComponent(trimmed)}`)
   }
 
+  const goCompare = () => {
+    const a = username.trim().replace(/^@/, '')
+    const b = vsUsername.trim().replace(/^@/, '')
+    if (!isValidGitHubUsername(a) || !isValidGitHubUsername(b)) {
+      setError('Use two valid GitHub usernames.')
+      return
+    }
+    if (a.toLowerCase() === b.toLowerCase()) {
+      setError('Pick two different developers to compare.')
+      return
+    }
+    setError(null)
+    navigate(`/vs/${encodeURIComponent(a)}/${encodeURIComponent(b)}`)
+  }
+
   const onSubmit = (event: FormEvent) => {
     event.preventDefault()
+    if (compareOpen) {
+      goCompare()
+      return
+    }
     go(username)
   }
 
@@ -125,15 +146,46 @@ export function Landing() {
                 type="submit"
                 className="inline-flex h-14 items-center justify-center gap-2.5 rounded-[14px] bg-[#F4EDE2] px-6 text-[17px] font-bold text-[#1A0B22] transition-transform duration-150 hover:bg-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F2C46D] lg:h-14 lg:rounded-xl lg:px-[26px]"
               >
-                Generate recap
+                {compareOpen ? 'Compare' : 'Generate recap'}
                 <ArrowRightIcon width={18} height={18} />
               </button>
             </div>
+            {compareOpen ? (
+              <div className="flex h-14 items-center gap-1 rounded-[14px] border border-[rgba(244,237,226,0.16)] bg-white/[0.06] px-4 lg:h-[52px]">
+                <span className="font-mono text-xs tracking-[0.14em] text-[#F2C46D] uppercase">
+                  vs
+                </span>
+                <input
+                  id="vs-username"
+                  value={vsUsername}
+                  onChange={(event) => {
+                    setVsUsername(event.target.value)
+                    if (error) setError(null)
+                  }}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="sindresorhus"
+                  aria-label="Compare with GitHub username"
+                  className="h-12 min-w-0 flex-1 border-0 bg-transparent text-[17px] font-medium text-[#F4EDE2] outline-none placeholder:text-[#8F84A0] lg:text-lg"
+                />
+              </div>
+            ) : null}
             {error ? (
               <p className="text-sm text-[#ffc2c2]" role="alert">
                 {error}
               </p>
             ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                setCompareOpen((open) => !open)
+                setError(null)
+              }}
+              className="text-left text-sm font-semibold text-[#F2C46D] hover:text-[#FFE2A6]"
+            >
+              {compareOpen ? 'Single recap instead' : 'Compare two developers'}
+            </button>
           </form>
 
           <div className="flex items-center gap-2 overflow-x-auto lg:flex-wrap">

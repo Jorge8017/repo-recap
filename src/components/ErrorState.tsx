@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import {
@@ -21,6 +22,9 @@ interface ErrorStateProps {
   error?: unknown
   kind?: RecapErrorKind
   onRetry?: () => void
+  failedUsername?: string
+  headlineOverride?: string
+  extraActions?: ReactNode
 }
 
 function ErrorGlyph({ icon }: { icon: ErrorIconId }) {
@@ -30,7 +34,14 @@ function ErrorGlyph({ icon }: { icon: ErrorIconId }) {
   return <ErrorSatelliteIcon {...props} />
 }
 
-export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
+export function ErrorState({
+  error,
+  kind,
+  onRetry,
+  failedUsername,
+  headlineOverride,
+  extraActions,
+}: ErrorStateProps) {
   const reducedMotion = usePrefersReducedMotion()
   const copy =
     kind === 'not_found'
@@ -40,6 +51,12 @@ export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
         : kind === 'rate_limit'
           ? RATE_LIMIT_COPY
           : presentRecapError(error)
+
+  const headline =
+    headlineOverride ??
+    (failedUsername && copy.kind === 'not_found'
+      ? `We couldn't find @${failedUsername.replace(/^@/, '')}`
+      : copy.headline)
 
   return (
     <div
@@ -68,7 +85,7 @@ export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
         <p className="mb-3 font-mono text-[11px] tracking-[0.16em] text-[#F2C46D] uppercase">
           {copy.eyebrow}
         </p>
-        <h1 className="text-4xl leading-tight font-bold">{copy.headline}</h1>
+        <h1 className="text-4xl leading-tight font-bold">{headline}</h1>
         <p className="mt-4 max-w-[28ch] text-lg text-[#C9BFD6]">{copy.body}</p>
         <div className="mt-10 flex flex-wrap gap-3">
           {onRetry ? <UiButton onClick={onRetry}>Retry</UiButton> : null}
@@ -83,6 +100,7 @@ export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
             Try another username
           </Link>
         </div>
+        {extraActions}
       </div>
     </div>
   )

@@ -1,5 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { isValidGitHubUsername } from '../../lib/username'
+import { isSameUser } from '../../lib/compare'
 import { useFitScale } from '../../hooks/useFitScale'
 import { FittedText } from '../FittedText'
 import {
@@ -53,8 +55,18 @@ export function SummarySlide({
   const [downloading, setDownloading] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [readmeOpen, setReadmeOpen] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
+  const [compareUser, setCompareUser] = useState('')
+  const [compareError, setCompareError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const compareInputRef = useRef<HTMLInputElement>(null)
   const origin = siteOrigin()
+
+  useEffect(() => {
+    if (compareOpen) {
+      window.requestAnimationFrame(() => compareInputRef.current?.focus())
+    }
+  }, [compareOpen])
 
   const showToast = (message: string) => {
     setToast(message)
@@ -256,6 +268,17 @@ export function SummarySlide({
           >
             Add to your GitHub README
           </button>
+          <button
+            type="button"
+            data-testid="compare-open"
+            onClick={() => {
+              setCompareOpen(true)
+              setCompareError(null)
+            }}
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-[14px] border border-white/15 bg-white/[0.04] px-4 text-[15px] font-semibold text-[#F4EDE2] hover:bg-white/10 lg:justify-start lg:text-base"
+          >
+            Compare with someone
+          </button>
           <div className="flex items-center justify-center gap-7 text-[15px] text-[#C9BFD6] lg:justify-start lg:gap-6 lg:text-base">
             <button
               type="button"
@@ -295,6 +318,78 @@ export function SummarySlide({
           window.requestAnimationFrame(() => readmeTriggerRef.current?.focus())
         }}
       />
+
+      {compareOpen ? (
+        <div
+          className="absolute inset-0 z-40 flex items-end justify-center bg-black/55 p-4 sm:items-center"
+          data-testid="compare-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="compare-dialog-title"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.stopPropagation()
+              setCompareOpen(false)
+            }
+          }}
+        >
+          <div className="w-full max-w-[400px] rounded-[20px] border border-white/10 bg-[#1B0A2B] p-5 shadow-2xl">
+            <h2 id="compare-dialog-title" className="text-xl font-bold">
+              Compare with someone
+            </h2>
+            <p className="mt-2 text-sm text-[#C9BFD6]">
+              Put @{stats.username} side by side with another public profile.
+            </p>
+            <label htmlFor="compare-username" className="mt-4 block text-sm text-[#C9BFD6]">
+              GitHub username
+            </label>
+            <input
+              ref={compareInputRef}
+              id="compare-username"
+              value={compareUser}
+              onChange={(event) => {
+                setCompareUser(event.target.value)
+                if (compareError) setCompareError(null)
+              }}
+              placeholder="gaearon"
+              className="mt-2 h-12 w-full rounded-[14px] border border-white/15 bg-white/[0.06] px-4 text-[#F4EDE2] outline-none focus:border-[#F2C46D]"
+            />
+            {compareError ? (
+              <p className="mt-2 text-sm text-[#ffc2c2]" role="alert">
+                {compareError}
+              </p>
+            ) : null}
+            <div className="mt-5 flex gap-2">
+              <UiButton
+                className="flex-1"
+                onClick={() => {
+                  const trimmed = compareUser.trim().replace(/^@/, '')
+                  if (!isValidGitHubUsername(trimmed)) {
+                    setCompareError('Use a valid GitHub username.')
+                    return
+                  }
+                  if (isSameUser(stats.username, trimmed)) {
+                    setCompareError('Pick a different developer.')
+                    return
+                  }
+                  navigate(
+                    `/vs/${encodeURIComponent(stats.username)}/${encodeURIComponent(trimmed)}`,
+                  )
+                }}
+              >
+                Compare
+              </UiButton>
+              <UiButton
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setCompareOpen(false)}
+              >
+                Cancel
+              </UiButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

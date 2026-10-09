@@ -2,6 +2,9 @@
   "functions": {
     "api/share-image.ts": {
       "includeFiles": "api/_fonts/**"
+    },
+    "api/compare-image.ts": {
+      "includeFiles": "api/_fonts/**"
     }
   },
   "rewrites": [
@@ -15,6 +18,17 @@
         }
       ],
       "destination": "/api/og-html?u=:username"
+    },
+    {
+      "source": "/vs/:userA/:userB",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(WhatsApp|facebookexternalhit|Twitterbot|Slackbot|LinkedInBot|Discordbot|TelegramBot).*"
+        }
+      ],
+      "destination": "/api/og-html?a=:userA&b=:userB"
     },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
