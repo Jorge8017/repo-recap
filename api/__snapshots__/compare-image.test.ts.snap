@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compare-image handler > returns 200 for Jorge8017 vs cabbage07 and keeps text inside the image width 1`] = `
+[
+  "J",
+  "Jordan Shears",
+  "@Jorge8017",
+  "VS",
+  "C",
+  "Cabbage",
+  "@cabbage07",
+  "Not enough public data",
+  "Not enough public data to score",
+  "40",
+  "Not comparable",
+  "Private",
+  "1 day",
+  "Not comparable",
+  "Private",
+  "8",
+  "Not comparable",
+  "Private",
+  "3",
+  "Not comparable",
+  "Private",
+  "recap.jordanshears.com",
+]
+`;

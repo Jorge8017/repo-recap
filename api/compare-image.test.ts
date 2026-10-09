@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { buildCompareCardElement, COMPARE_IMAGE_CONTENT_WIDTH } from './_lib/compareCardElement.js'
 import type { CachedRecapPayload } from '../src/types.js'
 
 const { fakePngBuffer, renderSharePng } = vi.hoisted(() => {
@@ -182,4 +183,92 @@ describe('compare-image handler', () => {
     expect(JSON.stringify(state.body)).not.toContain(TOKEN)
     expect(JSON.stringify(state.body)).not.toContain('missing-user')
   })
+
+  it('returns 200 for Jorge8017 vs cabbage07 and keeps text inside the image width', async () => {
+    const publicUser = samplePayload('Jorge8017')
+    publicUser.user.name = 'Jordan Shears'
+    const ghostUser: CachedRecapPayload = {
+      user: {
+        login: 'cabbage07',
+        name: 'Cabbage',
+        avatar_url: 'https://avatars.githubusercontent.com/u/cabbage07?v=4',
+        bio: null,
+        created_at: '2020-01-01T00:00:00Z',
+        public_repos: 0,
+        html_url: 'https://github.com/cabbage07',
+      },
+      repos: [],
+      events: [],
+      contributions: {
+        totalCommitContributions: 0,
+        totalPullRequestContributions: 0,
+        totalIssueContributions: 0,
+        totalPullRequestReviewContributions: 0,
+        restrictedContributionsCount: 0,
+        contributionCalendar: {
+          totalContributions: 0,
+          weeks: [],
+        },
+      },
+    }
+
+    vi.mocked(buildAuthenticatedRecap).mockImplementation(async (username) => {
+      const login = String(username).toLowerCase()
+      if (login === 'jorge8017') {
+        return { status: 200 as const, body: publicUser, headers: {} }
+      }
+      if (login === 'cabbage07') {
+        return { status: 200 as const, body: ghostUser, headers: {} }
+      }
+      return { status: 404 as const, body: { error: 'not_found' as const } }
+    })
+
+    const { res, state } = mockRes()
+    await handler(mockReq({ a: 'Jorge8017', b: 'cabbage07' }), res)
+
+    expect(state.statusCode).toBe(200)
+    expect(state.headers['content-type']).toBe('image/png')
+
+    const element = buildCompareCardElement(publicUser, ghostUser, null, null)
+    const nodes = collectStyledText(element)
+    expect(nodes.map((node) => node.text)).toMatchSnapshot()
+    for (const node of nodes) {
+      const estimated = estimateTextWidth(node.text, node.fontSize)
+      const limit = node.maxWidth ?? COMPARE_IMAGE_CONTENT_WIDTH
+      expect(estimated).toBeLessThanOrEqual(limit + 1)
+    }
+  })
 })
+
+function estimateTextWidth(text: string, fontSize: number): number {
+  return text.length * fontSize * 0.62
+}
+
+function collectStyledText(
+  node: unknown,
+  inherited: { fontSize: number; maxWidth?: number } = { fontSize: 36 },
+): Array<{ text: string; fontSize: number; maxWidth?: number }> {
+  if (node == null || typeof node === 'boolean') return []
+  if (typeof node === 'string' || typeof node === 'number') {
+    const text = String(node)
+    if (!text.trim()) return []
+    return [{ text, fontSize: inherited.fontSize, maxWidth: inherited.maxWidth }]
+  }
+  if (Array.isArray(node)) {
+    return node.flatMap((child) => collectStyledText(child, inherited))
+  }
+  if (typeof node === 'object' && 'props' in node) {
+    const props = (node as { props: { style?: Record<string, unknown>; children?: unknown } }).props
+    const style = props.style ?? {}
+    const fontSize =
+      typeof style.fontSize === 'number' ? style.fontSize : inherited.fontSize
+    const maxWidth =
+      typeof style.maxWidth === 'number'
+        ? style.maxWidth
+        : typeof style.width === 'number'
+          ? style.width
+          : inherited.maxWidth
+    return collectStyledText(props.children, { fontSize, maxWidth })
+  }
+  return []
+}

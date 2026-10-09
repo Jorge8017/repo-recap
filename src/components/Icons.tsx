@@ -103,6 +103,19 @@ export function CheckIcon(props: IconProps) {
   )
 }
 
+export function CrownIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M3.5 17.5h17l-1.2-9.2-4.3 3.4L12 5.5l-3 6.2-4.3-3.4z" />
+    </svg>
+  )
+}
+
 export function DownloadIcon(props: IconProps) {
   return (
     <svg

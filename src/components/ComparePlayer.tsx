@@ -332,9 +332,6 @@ export function ComparePlayer({
     >
       <header className="hidden w-full shrink-0 items-center justify-between gap-4 px-6 py-4 lg:flex lg:px-10">
         <BrandLink />
-        <span className="font-mono text-xs tracking-[0.14em] text-[#F2C46D] uppercase">
-          @{a.stats.username} vs @{b.stats.username}
-        </span>
         <CloseButton onClick={close} />
       </header>
 
@@ -351,13 +348,22 @@ export function ComparePlayer({
         <div
           ref={cardRef}
           data-testid="story-card"
-          className="story-card relative flex h-full w-full min-h-0 flex-col overflow-hidden lg:h-[min(746px,100%)] lg:w-[min(720px,92vw)] lg:rounded-[32px] lg:shadow-[0_50px_100px_rgba(0,0,0,0.55)]"
+          className="story-card relative flex h-full w-full min-h-0 flex-col overflow-hidden lg:h-[min(640px,calc(100dvh-180px))] lg:w-[min(860px,calc(100vw-160px))] lg:rounded-[32px] lg:shadow-[0_50px_100px_rgba(0,0,0,0.55)]"
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
           onContextMenu={(event) => event.preventDefault()}
         >
-          <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#2A1240] to-[#1B0A2B]">
+          <div
+            className="absolute inset-0 z-0"
+            style={{
+              backgroundImage: [
+                'radial-gradient(ellipse 55% 50% at 30% 55%, rgba(242,196,109,0.12), transparent 70%)',
+                'radial-gradient(ellipse 55% 50% at 70% 55%, rgba(111,211,184,0.12), transparent 70%)',
+                'linear-gradient(165deg, #241133, #160B22)',
+              ].join(', '),
+            }}
+          >
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={currentId}

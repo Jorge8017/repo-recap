@@ -1,18 +1,37 @@
-import type { JSX } from 'react'
+import type { JSX, ReactNode } from 'react'
 import { formatCount } from '../../lib/stats'
 import {
   buildCompareScore,
   busiestContrastLine,
+  COMPARE_COLOR_A,
+  COMPARE_COLOR_B,
   compareMetric,
+  contributionsVerdict,
   formatHourLabel,
-  sharedLanguage,
+  hasPeakTimeData,
+  isMetricPrivate,
+  languagesVerdict,
+  proportionShares,
+  starsVerdict,
+  streakVerdict,
   type CompareSlideId,
+  type CompareSide,
+  type VerdictPart,
 } from '../../lib/compare'
 import { LANGUAGE_BAR_COLORS } from '../../lib/slideMeta'
 import type { RecapResult } from '../../types'
 import { FittedText } from '../FittedText'
 import { PersonalityIcon } from '../PersonalityIcon'
-import { CompareHalf, CompareSplit } from './CompareHalf'
+import {
+  PlayerAvatar,
+  ProportionBar,
+  SideStatus,
+  VerdictLine,
+  VsBadge,
+  VsDivider,
+  playerColor,
+  sideOpacity,
+} from './CompareHalf'
 
 export interface CompareSlideProps {
   a: RecapResult
@@ -29,68 +48,77 @@ export interface CompareSlideProps {
 }
 
 function displayContributions(result: RecapResult): string {
-  if (result.stats.isEmptyProfile) return 'Private'
+  if (isMetricPrivate(result.stats, 'contributions')) return 'Private'
   return formatCount(result.stats.totalContributions)
 }
 
 function displayStreak(result: RecapResult): string {
-  if (result.stats.isEmptyProfile) return 'Private'
+  if (isMetricPrivate(result.stats, 'streak')) return 'Private'
   const n = result.stats.longestStreak
   return `${formatCount(n)} ${n === 1 ? 'day' : 'days'}`
 }
 
 function displayStars(result: RecapResult): string {
-  if (result.stats.isEmptyProfile) return 'Private'
+  if (isMetricPrivate(result.stats, 'stars')) return 'Private'
   return formatCount(result.stats.totalStars)
 }
 
-function AvatarRow({
-  src,
-  name,
-  username,
+function SlideShell({
+  testId,
+  label,
+  children,
 }: {
-  src: string
-  name: string
-  username: string
+  testId: string
+  label: string
+  children: ReactNode
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <img
-        src={src}
-        alt=""
-        width={56}
-        height={56}
-        className="h-14 w-14 rounded-[16px] object-cover bg-[#5B3A6E]"
-      />
-      <div className="min-w-0">
-        <p className="truncate text-lg font-bold leading-tight">{name}</p>
-        <p className="truncate text-sm text-[#CDB9DC]">@{username}</p>
-      </div>
-    </div>
+    <section
+      className="flex h-full min-h-0 flex-col justify-center gap-6 overflow-hidden px-5 pb-5 pt-[var(--story-chrome,5.75rem)] lg:px-8"
+      aria-label={label}
+      data-testid={testId}
+    >
+      {children}
+    </section>
   )
 }
 
-function LanguageBars({ result }: { result: RecapResult }) {
+function LanguageBars({
+  result,
+  accent,
+}: {
+  result: RecapResult
+  accent: string
+}) {
   const languages = result.stats.topLanguages.slice(0, 3)
   if (languages.length === 0) {
-    return <p className="text-sm text-[#C9BFD6]">No languages detected</p>
+    return (
+      <p className="text-[15px] text-[#8F84A0]">No public languages yet</p>
+    )
   }
   const used = languages.reduce((sum, lang) => sum + lang.percentage, 0)
   const rest = Math.max(0, 100 - used)
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex h-3 overflow-hidden rounded-full">
+    <div className="flex w-full flex-col gap-2">
+      <div className="flex h-3.5 gap-[3px] overflow-hidden rounded-full">
         {languages.map((lang, index) => (
           <div
             key={lang.name}
+            className="h-full rounded-full"
             style={{
               width: `${lang.percentage}%`,
-              background: LANGUAGE_BAR_COLORS[index % LANGUAGE_BAR_COLORS.length],
+              background:
+                index === 0
+                  ? accent
+                  : LANGUAGE_BAR_COLORS[index % LANGUAGE_BAR_COLORS.length],
             }}
           />
         ))}
         {rest > 0 ? (
-          <div style={{ width: `${rest}%`, background: 'rgba(255,255,255,0.18)' }} />
+          <div
+            className="h-full rounded-full"
+            style={{ width: `${rest}%`, background: 'rgba(255,255,255,0.18)' }}
+          />
         ) : null}
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#D7C7E6]">
@@ -111,89 +139,181 @@ export function CompareIntroSlide({
   avatarB,
 }: CompareSlideProps) {
   return (
-    <section
-      className="flex h-full min-h-0 flex-col justify-center gap-8 px-5 pb-6 pt-[var(--story-chrome,5.75rem)]"
-      aria-label={`Compare @${a.stats.username} versus @${b.stats.username}`}
-      data-testid="compare-intro"
+    <SlideShell
+      testId="compare-intro"
+      label={`Compare @${a.stats.username} versus @${b.stats.username}`}
     >
-      <CompareSplit>
-        <CompareHalf side="a">
-          <AvatarRow
-            src={avatarA}
-            name={a.stats.displayName}
-            username={a.stats.username}
-          />
-        </CompareHalf>
-        <CompareHalf side="b">
-          <AvatarRow
-            src={avatarB}
-            name={b.stats.displayName}
-            username={b.stats.username}
-          />
-        </CompareHalf>
-      </CompareSplit>
-      <p
-        data-testid="compare-hero"
-        className="text-center font-mono text-sm tracking-[0.14em] text-[#F2C46D] uppercase"
-      >
+      <div className="flex w-full flex-col items-center gap-6 min-[600px]:grid min-[600px]:grid-cols-[1fr_72px_1fr] min-[600px]:items-center">
+        <div className="flex flex-col items-center gap-3 min-[600px]:items-start">
+          <PlayerAvatar src={avatarA} side="a" size={72} />
+          <div className="min-w-0 text-center min-[600px]:text-left">
+            <p className="truncate text-xl font-bold">{a.stats.displayName}</p>
+            <p className="truncate text-sm" style={{ color: COMPARE_COLOR_A }}>
+              @{a.stats.username}
+            </p>
+          </div>
+        </div>
+        <div className="hidden min-[600px]:flex min-[600px]:justify-center">
+          <VsBadge />
+        </div>
+        <VsDivider />
+        <div className="flex flex-col items-center gap-3 min-[600px]:items-end">
+          <PlayerAvatar src={avatarB} side="b" size={72} />
+          <div className="min-w-0 text-center min-[600px]:text-right">
+            <p className="truncate text-xl font-bold">{b.stats.displayName}</p>
+            <p className="truncate text-sm" style={{ color: COMPARE_COLOR_B }}>
+              @{b.stats.username}
+            </p>
+          </div>
+        </div>
+      </div>
+      <p data-testid="compare-hero" className="sr-only">
         @{a.stats.username} vs @{b.stats.username}
       </p>
-    </section>
+    </SlideShell>
+  )
+}
+
+function StatDuel({
+  a,
+  b,
+  avatarA,
+  avatarB,
+  aDisplay,
+  bDisplay,
+  aValue,
+  bValue,
+  comparable,
+  winner,
+  verdict,
+  testId,
+}: {
+  a: RecapResult
+  b: RecapResult
+  avatarA: string
+  avatarB: string
+  aDisplay: string
+  bDisplay: string
+  aValue: number
+  bValue: number
+  comparable: boolean
+  winner: CompareSide
+  verdict: VerdictPart[]
+  testId: string
+}) {
+  const shares = comparable ? proportionShares(aValue, bValue) : null
+  const aOpacity = sideOpacity('a', winner, comparable)
+  const bOpacity = sideOpacity('b', winner, comparable)
+
+  return (
+    <div className="flex w-full flex-col items-center gap-6">
+      <div className="flex w-full flex-col gap-5 min-[600px]:grid min-[600px]:grid-cols-[1fr_72px_1fr] min-[600px]:items-center min-[600px]:gap-3">
+        <div
+          className="flex min-w-0 flex-col items-center gap-2 min-[600px]:items-start"
+          style={{ opacity: aOpacity }}
+        >
+          <SideStatus side="a" winner={winner} comparable={comparable} />
+          <div className="flex items-center gap-2.5">
+            <PlayerAvatar src={avatarA} side="a" />
+            <p className="truncate text-sm" style={{ color: COMPARE_COLOR_A }}>
+              @{a.stats.username}
+            </p>
+          </div>
+          <FittedText
+            text={aDisplay}
+            maxSize={96}
+            minSize={48}
+            testId={`${testId}-hero-a`}
+            className="font-bold tracking-[-0.04em] min-[600px]:text-left"
+            style={{ color: COMPARE_COLOR_A }}
+          />
+        </div>
+
+        <div className="hidden min-[600px]:flex min-[600px]:justify-center">
+          <VsBadge />
+        </div>
+        <VsDivider />
+
+        <div
+          className="flex min-w-0 flex-col items-center gap-2 min-[600px]:items-end"
+          style={{ opacity: bOpacity }}
+        >
+          <SideStatus side="b" winner={winner} comparable={comparable} />
+          <div className="flex flex-row-reverse items-center gap-2.5 min-[600px]:flex-row">
+            <p className="truncate text-sm" style={{ color: COMPARE_COLOR_B }}>
+              @{b.stats.username}
+            </p>
+            <PlayerAvatar src={avatarB} side="b" />
+          </div>
+          <FittedText
+            text={bDisplay}
+            maxSize={96}
+            minSize={48}
+            testId={`${testId}-hero-b`}
+            className="font-bold tracking-[-0.04em] min-[600px]:text-right"
+            style={{ color: COMPARE_COLOR_B }}
+          />
+        </div>
+      </div>
+
+      {shares ? (
+        <ProportionBar aPercent={shares.aPercent} bPercent={shares.bPercent} />
+      ) : null}
+
+      <VerdictLine parts={verdict} />
+    </div>
   )
 }
 
 function StatCompareSlide({
   a,
   b,
-  label,
+  avatarA,
+  avatarB,
   aDisplay,
   bDisplay,
   aValue,
   bValue,
+  roundId,
+  verdict,
   testId,
+  label,
 }: {
   a: RecapResult
   b: RecapResult
-  label: string
+  avatarA: string
+  avatarB: string
   aDisplay: string
   bDisplay: string
   aValue: number
   bValue: number
+  roundId: 'contributions' | 'streak' | 'stars'
+  verdict: VerdictPart[]
   testId: string
+  label: string
 }) {
-  const winner = compareMetric(aValue, bValue)
+  const aPrivate = isMetricPrivate(a.stats, roundId)
+  const bPrivate = isMetricPrivate(b.stats, roundId)
+  const comparable = !aPrivate && !bPrivate
+  const winner = comparable ? compareMetric(aValue, bValue) : 'tie'
+
   return (
-    <section
-      className="flex h-full min-h-0 flex-col px-5 pb-6 pt-[var(--story-chrome,5.75rem)]"
-      aria-label={`${label}: @${a.stats.username} versus @${b.stats.username}`}
-      data-testid={testId}
-    >
-      <p className="mb-4 font-mono text-[11px] tracking-[0.16em] text-[#FFC9A8] uppercase">
-        {label}
-      </p>
-      <CompareSplit>
-        <CompareHalf side="a" winner={winner} showWinnerChip>
-          <p className="text-sm text-[#CDB9DC]">@{a.stats.username}</p>
-          <FittedText
-            text={aDisplay}
-            maxSize={56}
-            minSize={28}
-            testId={`${testId}-hero-a`}
-            className="mt-2 font-bold tracking-[-0.03em]"
-          />
-        </CompareHalf>
-        <CompareHalf side="b" winner={winner} showWinnerChip>
-          <p className="text-sm text-[#CDB9DC]">@{b.stats.username}</p>
-          <FittedText
-            text={bDisplay}
-            maxSize={56}
-            minSize={28}
-            testId={`${testId}-hero-b`}
-            className="mt-2 font-bold tracking-[-0.03em]"
-          />
-        </CompareHalf>
-      </CompareSplit>
-    </section>
+    <SlideShell testId={testId} label={label}>
+      <StatDuel
+        a={a}
+        b={b}
+        avatarA={avatarA}
+        avatarB={avatarB}
+        aDisplay={aDisplay}
+        bDisplay={bDisplay}
+        aValue={aValue}
+        bValue={bValue}
+        comparable={comparable}
+        winner={winner}
+        verdict={verdict}
+        testId={testId}
+      />
+    </SlideShell>
   )
 }
 
@@ -202,12 +322,16 @@ export function CompareContributionsSlide(props: CompareSlideProps) {
     <StatCompareSlide
       a={props.a}
       b={props.b}
-      label="Last 12 months"
+      avatarA={props.avatarA}
+      avatarB={props.avatarB}
       aDisplay={displayContributions(props.a)}
       bDisplay={displayContributions(props.b)}
       aValue={props.a.stats.totalContributions}
       bValue={props.b.stats.totalContributions}
+      roundId="contributions"
+      verdict={contributionsVerdict(props.a.stats, props.b.stats)}
       testId="compare-contributions"
+      label={`Contributions: @${props.a.stats.username} versus @${props.b.stats.username}`}
     />
   )
 }
@@ -217,12 +341,16 @@ export function CompareStreakSlide(props: CompareSlideProps) {
     <StatCompareSlide
       a={props.a}
       b={props.b}
-      label="Longest streak"
+      avatarA={props.avatarA}
+      avatarB={props.avatarB}
       aDisplay={displayStreak(props.a)}
       bDisplay={displayStreak(props.b)}
       aValue={props.a.stats.longestStreak}
       bValue={props.b.stats.longestStreak}
+      roundId="streak"
+      verdict={streakVerdict(props.a.stats, props.b.stats)}
       testId="compare-streak"
+      label={`Streak: @${props.a.stats.username} versus @${props.b.stats.username}`}
     />
   )
 }
@@ -232,145 +360,204 @@ export function CompareStarsSlide(props: CompareSlideProps) {
     <StatCompareSlide
       a={props.a}
       b={props.b}
-      label="Stars received"
+      avatarA={props.avatarA}
+      avatarB={props.avatarB}
       aDisplay={displayStars(props.a)}
       bDisplay={displayStars(props.b)}
       aValue={props.a.stats.totalStars}
       bValue={props.b.stats.totalStars}
+      roundId="stars"
+      verdict={starsVerdict(props.a.stats, props.b.stats)}
       testId="compare-stars"
+      label={`Stars: @${props.a.stats.username} versus @${props.b.stats.username}`}
     />
   )
 }
 
-export function CompareLanguagesSlide({ a, b }: CompareSlideProps) {
-  const shared = sharedLanguage(a.stats, b.stats)
+export function CompareLanguagesSlide({
+  a,
+  b,
+  avatarA,
+  avatarB,
+}: CompareSlideProps) {
+  const verdict = languagesVerdict(a.stats, b.stats)
   return (
-    <section
-      className="flex h-full min-h-0 flex-col px-5 pb-6 pt-[var(--story-chrome,5.75rem)]"
-      data-testid="compare-languages"
-      aria-label="Top languages comparison"
-    >
-      <p className="mb-4 font-mono text-[11px] tracking-[0.16em] text-[#FFC9A8] uppercase">
-        Top languages
-      </p>
-      <CompareSplit>
-        <CompareHalf side="a">
-          <p className="mb-3 text-sm text-[#CDB9DC]">@{a.stats.username}</p>
-          <LanguageBars result={a} />
-        </CompareHalf>
-        <CompareHalf side="b">
-          <p className="mb-3 text-sm text-[#CDB9DC]">@{b.stats.username}</p>
-          <LanguageBars result={b} />
-        </CompareHalf>
-      </CompareSplit>
-      {shared ? (
-        <p
-          data-testid="compare-hero"
-          className="mt-6 text-center text-base text-[#F2C46D]"
-        >
-          You both write {shared}
+    <SlideShell testId="compare-languages" label="Top languages comparison">
+      <div className="flex w-full flex-col items-center gap-6">
+        <div className="flex w-full flex-col gap-5 min-[600px]:grid min-[600px]:grid-cols-[1fr_72px_1fr] min-[600px]:items-center">
+          <div className="flex min-w-0 flex-col items-center gap-3 min-[600px]:items-start">
+            <div className="flex items-center gap-2.5">
+              <PlayerAvatar src={avatarA} side="a" />
+              <p className="text-sm" style={{ color: COMPARE_COLOR_A }}>
+                @{a.stats.username}
+              </p>
+            </div>
+            <LanguageBars result={a} accent={COMPARE_COLOR_A} />
+          </div>
+          <div className="hidden min-[600px]:flex min-[600px]:justify-center">
+            <VsBadge />
+          </div>
+          <VsDivider />
+          <div className="flex min-w-0 flex-col items-center gap-3 min-[600px]:items-end">
+            <div className="flex flex-row-reverse items-center gap-2.5 min-[600px]:flex-row">
+              <p className="text-sm" style={{ color: COMPARE_COLOR_B }}>
+                @{b.stats.username}
+              </p>
+              <PlayerAvatar src={avatarB} side="b" />
+            </div>
+            <LanguageBars result={b} accent={COMPARE_COLOR_B} />
+          </div>
+        </div>
+        <p data-testid="compare-hero" className="text-center text-[22px] text-[#F4EDE2]">
+          {verdict}
         </p>
-      ) : (
-        <p data-testid="compare-hero" className="mt-6 text-center text-base text-[#C9BFD6]">
-          Different stacks
-        </p>
-      )}
-    </section>
+      </div>
+    </SlideShell>
   )
 }
 
-export function CompareBusiestSlide({ a, b }: CompareSlideProps) {
+function PeakSide({
+  result,
+  avatar,
+  side,
+}: {
+  result: RecapResult
+  avatar: string
+  side: 'a' | 'b'
+}) {
+  const hasData = hasPeakTimeData(result.stats)
+  const align =
+    side === 'a'
+      ? 'items-center min-[600px]:items-start'
+      : 'items-center min-[600px]:items-end'
+  const textAlign =
+    side === 'a' ? 'text-center min-[600px]:text-left' : 'text-center min-[600px]:text-right'
+
+  return (
+    <div className={`flex min-w-0 flex-col gap-3 ${align}`}>
+      <div
+        className={`flex items-center gap-2.5 ${
+          side === 'b' ? 'flex-row-reverse min-[600px]:flex-row' : ''
+        }`}
+      >
+        {side === 'b' ? (
+          <p className="text-sm" style={{ color: playerColor(side) }}>
+            @{result.stats.username}
+          </p>
+        ) : null}
+        <PlayerAvatar src={avatar} side={side} />
+        {side === 'a' ? (
+          <p className="text-sm" style={{ color: playerColor(side) }}>
+            @{result.stats.username}
+          </p>
+        ) : null}
+      </div>
+      {hasData ? (
+        <div className={textAlign}>
+          <FittedText
+            text={result.stats.busiestDay ?? formatHourLabel(result.stats.busiestHour)}
+            maxSize={48}
+            minSize={28}
+            testId={`compare-busiest-hero-${side}`}
+            className="font-bold"
+            style={{ color: playerColor(side) }}
+          />
+          {result.stats.busiestDay && result.stats.busiestHour !== null ? (
+            <p className="mt-2 text-[#D7C7E6]">
+              {formatHourLabel(result.stats.busiestHour)}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p
+          data-testid={`compare-busiest-hero-${side}`}
+          className={`text-[22px] text-[#8F84A0] ${textAlign}`}
+        >
+          Keeps their hours private
+        </p>
+      )}
+    </div>
+  )
+}
+
+export function CompareBusiestSlide({
+  a,
+  b,
+  avatarA,
+  avatarB,
+}: CompareSlideProps) {
   const line = busiestContrastLine(a.stats, b.stats)
   return (
-    <section
-      className="flex h-full min-h-0 flex-col px-5 pb-6 pt-[var(--story-chrome,5.75rem)]"
-      data-testid="compare-busiest"
-      aria-label="Peak time comparison"
-    >
-      <p className="mb-4 font-mono text-[11px] tracking-[0.16em] text-[#FFC9A8] uppercase">
-        Peak time
-      </p>
-      <CompareSplit>
-        <CompareHalf side="a">
-          <p className="text-sm text-[#CDB9DC]">@{a.stats.username}</p>
-          <FittedText
-            text={a.stats.busiestDay ?? '—'}
-            maxSize={48}
-            minSize={24}
-            testId="compare-busiest-hero-a"
-            className="mt-2 font-bold"
-          />
-          <p className="mt-2 text-[#D7C7E6]">
-            {formatHourLabel(a.stats.busiestHour)}
-          </p>
-        </CompareHalf>
-        <CompareHalf side="b">
-          <p className="text-sm text-[#CDB9DC]">@{b.stats.username}</p>
-          <FittedText
-            text={b.stats.busiestDay ?? '—'}
-            maxSize={48}
-            minSize={24}
-            testId="compare-busiest-hero-b"
-            className="mt-2 font-bold"
-          />
-          <p className="mt-2 text-[#D7C7E6]">
-            {formatHourLabel(b.stats.busiestHour)}
-          </p>
-        </CompareHalf>
-      </CompareSplit>
-      <p data-testid="compare-hero" className="mt-6 text-center text-base text-[#F2C46D]">
-        {line}
-      </p>
-    </section>
+    <SlideShell testId="compare-busiest" label="Peak time comparison">
+      <div className="flex w-full flex-col items-center gap-6">
+        <div className="flex w-full flex-col gap-5 min-[600px]:grid min-[600px]:grid-cols-[1fr_72px_1fr] min-[600px]:items-center">
+          <PeakSide result={a} avatar={avatarA} side="a" />
+          <div className="hidden min-[600px]:flex min-[600px]:justify-center">
+            <VsBadge />
+          </div>
+          <VsDivider />
+          <PeakSide result={b} avatar={avatarB} side="b" />
+        </div>
+        <p data-testid="compare-hero" className="text-center text-[22px] text-[#F4EDE2]">
+          {line}
+        </p>
+      </div>
+    </SlideShell>
   )
 }
 
 export function ComparePersonalitiesSlide({ a, b }: CompareSlideProps) {
   return (
-    <section
-      className="flex h-full min-h-0 flex-col px-5 pb-6 pt-[var(--story-chrome,5.75rem)]"
-      data-testid="compare-personalities"
-      aria-label="Personalities side by side"
+    <SlideShell
+      testId="compare-personalities"
+      label="Personalities side by side"
     >
-      <CompareSplit>
-        <CompareHalf side="a">
-          <PersonalityIcon id={a.personality.id} size={56} />
+      <div className="mx-auto flex w-full max-w-[640px] flex-col items-center gap-5">
+        <div className="flex w-full flex-col items-center gap-3 text-center">
+          <PersonalityIcon id={a.personality.id} size={48} color={COMPARE_COLOR_A} />
           <FittedText
             text={a.personality.title}
-            maxSize={44}
+            maxSize={40}
             minSize={22}
             testId="compare-personality-hero-a"
-            className="mt-3 font-bold tracking-[-0.03em]"
+            className="font-bold tracking-[-0.03em]"
+            style={{ color: COMPARE_COLOR_A }}
           />
-          <p className="mt-2 text-sm leading-snug text-[#D7C7E6]">
+          <p className="max-w-[28rem] text-sm leading-snug text-[#D7C7E6]">
             {a.personality.description}
           </p>
-        </CompareHalf>
-        <CompareHalf side="b">
-          <PersonalityIcon id={b.personality.id} size={56} />
+        </div>
+        <VsDivider />
+        <div className="hidden w-full items-center justify-center min-[600px]:flex">
+          <VsBadge size={56} />
+        </div>
+        <div className="flex w-full flex-col items-center gap-3 text-center">
+          <PersonalityIcon id={b.personality.id} size={48} color={COMPARE_COLOR_B} />
           <FittedText
             text={b.personality.title}
-            maxSize={44}
+            maxSize={40}
             minSize={22}
             testId="compare-personality-hero-b"
-            className="mt-3 font-bold tracking-[-0.03em]"
+            className="font-bold tracking-[-0.03em]"
+            style={{ color: COMPARE_COLOR_B }}
           />
-          <p className="mt-2 text-sm leading-snug text-[#D7C7E6]">
+          <p className="max-w-[28rem] text-sm leading-snug text-[#D7C7E6]">
             {b.personality.description}
           </p>
-        </CompareHalf>
-      </CompareSplit>
+        </div>
+      </div>
       <p data-testid="compare-hero" className="sr-only">
         {a.personality.title} vs {b.personality.title}
       </p>
-    </section>
+    </SlideShell>
   )
 }
 
 export function CompareScoreSlide({
   a,
   b,
-  onReplay,
+  avatarA,
+  avatarB,
   onSwap,
   onDownload,
   onCopyLink,
@@ -378,67 +565,147 @@ export function CompareScoreSlide({
   toast,
 }: CompareSlideProps) {
   const score = buildCompareScore(a.stats, b.stats)
+  const aDim = score.enoughData && score.winner === 'b'
+  const bDim = score.enoughData && score.winner === 'a'
+
   return (
     <section
-      className="relative flex h-full min-h-0 flex-col overflow-hidden px-5 pb-6 pt-[var(--story-chrome,5.75rem)]"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden px-5 pb-4 pt-[var(--story-chrome,5.75rem)] lg:px-8"
       data-testid="compare-score"
       aria-label={score.headline}
     >
-      <FittedText
-        text={score.headline}
-        maxSize={42}
-        minSize={22}
-        testId="compare-hero"
-        className="font-bold tracking-[-0.03em]"
-      />
-      <ul className="mt-6 space-y-2 text-sm text-[#D7C7E6]">
-        {score.rounds.map((round) => (
-          <li key={round.id} className="flex justify-between gap-3 border-b border-white/10 py-2">
-            <span>{round.label}</span>
-            <span className="text-[#F4EDE2]">
-              {round.aDisplay} · {round.bDisplay}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-auto flex flex-col gap-2.5 pt-6">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex shrink-0 items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <PlayerAvatar src={avatarA} side="a" size={64} />
+            <div className="min-w-0">
+              <p className="truncate font-semibold">{a.stats.displayName}</p>
+              <p className="truncate text-sm" style={{ color: COMPARE_COLOR_A }}>
+                @{a.stats.username}
+              </p>
+            </div>
+          </div>
+
+          {score.enoughData ? (
+            <p
+              data-testid="compare-score-digits"
+              className="shrink-0 font-bold tracking-[-0.05em]"
+              style={{ fontSize: 'clamp(2.5rem, 12vw, 6.5rem)', lineHeight: 1 }}
+            >
+              <span style={{ color: COMPARE_COLOR_A, opacity: aDim ? 0.55 : 1 }}>
+                {score.aWins}
+              </span>
+              <span className="mx-2 text-[#8F84A0]">–</span>
+              <span style={{ color: COMPARE_COLOR_B, opacity: bDim ? 0.55 : 1 }}>
+                {score.bWins}
+              </span>
+            </p>
+          ) : (
+            <span data-testid="compare-score-digits" className="w-8 shrink-0" />
+          )}
+
+          <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-2.5">
+            <PlayerAvatar src={avatarB} side="b" size={64} />
+            <div className="min-w-0 text-right">
+              <p className="truncate font-semibold">{b.stats.displayName}</p>
+              <p className="truncate text-sm" style={{ color: COMPARE_COLOR_B }}>
+                @{b.stats.username}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p
+          data-testid="compare-hero"
+          className="mt-4 shrink-0 text-center text-[22px] leading-snug text-[#F4EDE2]"
+        >
+          {score.headline}
+        </p>
+
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <ul className="space-y-1">
+            {score.rounds.map((round) => {
+              const muted = !round.comparable
+              const aWin = round.comparable && round.winner === 'a'
+              const bWin = round.comparable && round.winner === 'b'
+              return (
+                <li
+                  key={round.id}
+                  className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-white/8 py-2 text-sm"
+                >
+                  <span
+                    className="truncate"
+                    style={{
+                      color: muted
+                        ? '#8F84A0'
+                        : aWin
+                          ? COMPARE_COLOR_A
+                          : round.winner === 'b'
+                            ? 'rgba(244,237,226,0.55)'
+                            : '#F4EDE2',
+                      fontWeight: aWin ? 700 : 400,
+                    }}
+                  >
+                    {round.aDisplay}
+                  </span>
+                  <span className="font-mono text-[11px] tracking-[0.12em] text-[#8F84A0] uppercase">
+                    {muted ? 'Not comparable' : round.label}
+                  </span>
+                  <span
+                    className="truncate text-right"
+                    style={{
+                      color: muted
+                        ? '#8F84A0'
+                        : bWin
+                          ? COMPARE_COLOR_B
+                          : round.winner === 'a'
+                            ? 'rgba(244,237,226,0.55)'
+                            : '#F4EDE2',
+                      fontWeight: bWin ? 700 : 400,
+                    }}
+                  >
+                    {round.bDisplay}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      </div>
+
+      <div className="mt-3 flex shrink-0 flex-col gap-2.5">
         <button
           type="button"
-          className="inline-flex h-12 items-center justify-center rounded-[14px] bg-[#F4EDE2] px-4 font-semibold text-[#1A0B22]"
+          data-testid="compare-download"
+          className="inline-flex h-11 items-center justify-center rounded-[14px] bg-[#F4EDE2] px-4 font-semibold text-[#1A0B22]"
           onClick={() => void onDownload()}
           disabled={downloading}
         >
-          {downloading ? 'Preparing…' : 'Download comparison image'}
+          {downloading ? 'Preparing…' : 'Download image'}
         </button>
         <button
           type="button"
-          className="inline-flex h-12 items-center justify-center rounded-[14px] border border-white/20 bg-white/5 px-4 font-semibold"
+          data-testid="compare-copy-link"
+          className="inline-flex h-11 items-center justify-center rounded-[14px] border border-white/20 bg-white/5 px-4 font-semibold"
           onClick={() => void onCopyLink()}
         >
           Copy link
         </button>
-        <div className="flex gap-2">
+        <div className="flex items-center justify-center gap-5 pt-0.5 text-sm text-[#C9BFD6]">
           <button
             type="button"
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-[14px] border border-white/15 px-3 text-sm"
+            className="underline-offset-2 hover:text-[#F4EDE2] hover:underline"
             onClick={onSwap}
           >
-            Swap sides
+            Swap
           </button>
-          <button
-            type="button"
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-[14px] border border-white/15 px-3 text-sm"
-            onClick={onReplay}
+          <a
+            href="/"
+            className="underline-offset-2 hover:text-[#F4EDE2] hover:underline"
           >
-            Replay
-          </button>
+            New match
+          </a>
         </div>
-        <a
-          href="/"
-          className="inline-flex h-11 items-center justify-center text-sm text-[#C9BFD6] underline-offset-2 hover:underline"
-        >
-          Try other names
-        </a>
       </div>
       {toast ? (
         <p

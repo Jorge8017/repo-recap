@@ -1,14 +1,51 @@
 import { createElement as h, type ReactElement } from 'react'
-import { buildCompareScore } from '../../src/lib/compare.js'
+import {
+  buildCompareScore,
+  COMPARE_COLOR_A,
+  COMPARE_COLOR_B,
+} from '../../src/lib/compare.js'
 import { buildRecapStats } from '../../src/lib/stats.js'
 import type { CachedRecapPayload } from '../../src/types.js'
 import { truncateEllipsis } from './xml.js'
 import {
-  SHARE_CARD_BACKGROUND_IMAGE,
   SHARE_IMAGE_FOOTER,
   SHARE_IMAGE_HEIGHT,
   SHARE_IMAGE_WIDTH,
 } from './shareCardElement.js'
+
+export const COMPARE_IMAGE_PADDING = 72
+export const COMPARE_IMAGE_CONTENT_WIDTH =
+  SHARE_IMAGE_WIDTH - COMPARE_IMAGE_PADDING * 2
+
+/** Soft gold/teal glows on the compare gradient — Satori has no CSS blur. */
+export const COMPARE_CARD_BACKGROUND_IMAGE = [
+  'radial-gradient(540px 480px at 30% 55%, rgba(242,196,109,0.14) 0%, rgba(242,196,109,0) 70%)',
+  'radial-gradient(540px 480px at 70% 55%, rgba(111,211,184,0.14) 0%, rgba(111,211,184,0) 70%)',
+  'linear-gradient(165deg, #241133, #160B22)',
+].join(', ')
+
+const VALUE_COL_WIDTH = 300
+
+function valueStyle(opts: {
+  color: string
+  opacity: number
+  bold: boolean
+  align: 'left' | 'right'
+}) {
+  return {
+    display: 'flex',
+    width: VALUE_COL_WIDTH,
+    maxWidth: VALUE_COL_WIDTH,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+    fontSize: 36,
+    fontWeight: opts.bold ? 700 : 500,
+    color: opts.color,
+    opacity: opts.opacity,
+    justifyContent: opts.align === 'right' ? 'flex-end' : 'flex-start',
+  }
+}
 
 export function buildCompareCardElement(
   payloadA: CachedRecapPayload,
@@ -32,49 +69,68 @@ export function buildCompareCardElement(
     payloadB.contributions ?? null,
   )
   const score = buildCompareScore(statsA, statsB)
-  const nameA = truncateEllipsis(statsA.displayName, 18)
-  const nameB = truncateEllipsis(statsB.displayName, 18)
-  const rows = score.rounds.filter((round) =>
-    ['contributions', 'streak', 'stars'].includes(round.id),
-  )
+  const nameA = truncateEllipsis(statsA.displayName, 16)
+  const nameB = truncateEllipsis(statsB.displayName, 16)
+  const rows = score.rounds
 
-  const avatar = (src: string | null, initial: string) =>
-    src
-      ? h('img', {
-          src,
-          width: 96,
-          height: 96,
-          style: {
-            width: 96,
-            height: 96,
-            borderRadius: 28,
-            objectFit: 'cover',
-            background: '#5B3A6E',
-          },
-        })
-      : h(
-          'div',
-          {
+  const avatar = (
+    src: string | null,
+    initial: string,
+    ring: string,
+  ) =>
+    h(
+      'div',
+      {
+        style: {
+          display: 'flex',
+          width: 124,
+          height: 124,
+          borderRadius: 999,
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: ring,
+          padding: 2,
+        },
+      },
+      src
+        ? h('img', {
+            src,
+            width: 120,
+            height: 120,
             style: {
-              display: 'flex',
-              width: 96,
-              height: 96,
-              borderRadius: 28,
+              width: 120,
+              height: 120,
+              borderRadius: 999,
+              objectFit: 'cover',
               background: '#5B3A6E',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 40,
-              fontWeight: 700,
-              color: '#F4EDE2',
             },
-          },
-          initial,
-        )
+          })
+        : h(
+            'div',
+            {
+              style: {
+                display: 'flex',
+                width: 120,
+                height: 120,
+                borderRadius: 999,
+                background: '#5B3A6E',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 48,
+                fontWeight: 700,
+                color: '#F4EDE2',
+              },
+            },
+            initial,
+          ),
+    )
 
   const person = (
     name: string,
     username: string,
     src: string | null,
+    color: string,
+    align: 'flex-start' | 'flex-end',
   ) =>
     h(
       'div',
@@ -82,18 +138,24 @@ export function buildCompareCardElement(
         style: {
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          gap: 12,
+          alignItems: align,
+          gap: 10,
           flex: 1,
+          minWidth: 0,
+          maxWidth: 360,
         },
       },
-      avatar(src, (name[0] ?? '?').toUpperCase()),
+      avatar(src, (name[0] ?? '?').toUpperCase(), color),
       h(
         'div',
         {
           style: {
             display: 'flex',
-            fontSize: 32,
+            maxWidth: '100%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontSize: 30,
             fontWeight: 700,
             color: '#F4EDE2',
           },
@@ -102,10 +164,23 @@ export function buildCompareCardElement(
       ),
       h(
         'div',
-        { style: { display: 'flex', fontSize: 24, color: '#CDB9DC' } },
-        `@${username}`,
+        {
+          style: {
+            display: 'flex',
+            maxWidth: '100%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontSize: 24,
+            color,
+          },
+        },
+        `@${truncateEllipsis(username, 18)}`,
       ),
     )
+
+  const aDim = score.enoughData && score.winner === 'b' ? 0.55 : 1
+  const bDim = score.enoughData && score.winner === 'a' ? 0.55 : 1
 
   return h(
     'div',
@@ -116,10 +191,10 @@ export function buildCompareCardElement(
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: 72,
+        padding: COMPARE_IMAGE_PADDING,
         fontFamily: 'Space Grotesk',
         color: '#F4EDE2',
-        backgroundImage: SHARE_CARD_BACKGROUND_IMAGE,
+        backgroundImage: COMPARE_CARD_BACKGROUND_IMAGE,
       },
     },
     h(
@@ -128,28 +203,35 @@ export function buildCompareCardElement(
         style: {
           display: 'flex',
           width: '100%',
-          alignItems: 'flex-start',
+          alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 24,
+          gap: 20,
         },
       },
-      person(nameA, statsA.username, avatarA),
+      person(nameA, statsA.username, avatarA, COMPARE_COLOR_A, 'flex-start'),
       h(
         'div',
         {
           style: {
             display: 'flex',
+            width: 72,
+            height: 72,
+            borderRadius: 999,
+            border: '1px solid rgba(244,237,226,0.2)',
+            background: 'rgba(255,255,255,0.06)',
+            alignItems: 'center',
+            justifyContent: 'center',
             fontFamily: 'JetBrains Mono',
-            fontSize: 28,
+            fontSize: 22,
             fontWeight: 500,
             letterSpacing: '0.14em',
-            color: '#F2C46D',
-            paddingTop: 28,
+            color: '#F4EDE2',
+            flexShrink: 0,
           },
         },
         'VS',
       ),
-      person(nameB, statsB.username, avatarB),
+      person(nameB, statsB.username, avatarB, COMPARE_COLOR_B, 'flex-end'),
     ),
     h(
       'div',
@@ -157,18 +239,112 @@ export function buildCompareCardElement(
         style: {
           display: 'flex',
           flexDirection: 'column',
-          gap: 28,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 18,
+          width: '100%',
+          flex: 1,
+        },
+      },
+      score.enoughData
+        ? h(
+            'div',
+            {
+              style: {
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'center',
+                gap: 18,
+                fontSize: 120,
+                fontWeight: 700,
+                letterSpacing: '-0.05em',
+                lineHeight: 1,
+              },
+            },
+            h(
+              'div',
+              {
+                style: {
+                  display: 'flex',
+                  color: COMPARE_COLOR_A,
+                  opacity: aDim,
+                },
+              },
+              String(score.aWins),
+            ),
+            h(
+              'div',
+              { style: { display: 'flex', color: '#8F84A0', fontSize: 80 } },
+              '–',
+            ),
+            h(
+              'div',
+              {
+                style: {
+                  display: 'flex',
+                  color: COMPARE_COLOR_B,
+                  opacity: bDim,
+                },
+              },
+              String(score.bWins),
+            ),
+          )
+        : h(
+            'div',
+            {
+              style: {
+                display: 'flex',
+                maxWidth: COMPARE_IMAGE_CONTENT_WIDTH,
+                textAlign: 'center',
+                fontSize: 40,
+                fontWeight: 700,
+                color: '#C9BFD6',
+                justifyContent: 'center',
+              },
+            },
+            'Not enough public data',
+          ),
+      h(
+        'div',
+        {
+          style: {
+            display: 'flex',
+            maxWidth: COMPARE_IMAGE_CONTENT_WIDTH,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontSize: 28,
+            color: '#F4EDE2',
+            justifyContent: 'center',
+          },
+        },
+        truncateEllipsis(score.headline, 48),
+      ),
+    ),
+    h(
+      'div',
+      {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 18,
           width: '100%',
         },
       },
-      ...rows.map((round) =>
-        h(
+      ...rows.map((round) => {
+        const muted = !round.comparable
+        const aWin = round.comparable && round.winner === 'a'
+        const bWin = round.comparable && round.winner === 'b'
+        const aText = truncateEllipsis(round.aDisplay, 14)
+        const bText = truncateEllipsis(round.bDisplay, 14)
+        return h(
           'div',
           {
             key: round.id,
             style: {
               display: 'flex',
               width: '100%',
+              maxWidth: COMPARE_IMAGE_CONTENT_WIDTH,
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 16,
@@ -177,73 +353,58 @@ export function buildCompareCardElement(
           h(
             'div',
             {
-              style: {
-                display: 'flex',
-                flex: 1,
-                fontSize: 40,
-                fontWeight: 700,
-                color: round.winner === 'a' ? '#F2C46D' : '#F4EDE2',
-              },
+              style: valueStyle({
+                color: muted ? '#8F84A0' : COMPARE_COLOR_A,
+                opacity: muted ? 1 : aWin ? 1 : round.winner === 'b' ? 0.55 : 1,
+                bold: aWin,
+                align: 'left',
+              }),
             },
-            round.aDisplay,
+            aText,
           ),
           h(
             'div',
             {
               style: {
                 display: 'flex',
+                flex: 1,
+                justifyContent: 'center',
                 fontFamily: 'JetBrains Mono',
-                fontSize: 22,
+                fontSize: 20,
                 letterSpacing: '0.12em',
-                color: '#B9A6CB',
+                color: '#8F84A0',
                 textTransform: 'uppercase',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               },
             },
-            round.label,
+            muted ? 'Not comparable' : round.label,
           ),
           h(
             'div',
             {
-              style: {
-                display: 'flex',
-                flex: 1,
-                justifyContent: 'flex-end',
-                fontSize: 40,
-                fontWeight: 700,
-                color: round.winner === 'b' ? '#F2C46D' : '#F4EDE2',
-              },
+              style: valueStyle({
+                color: muted ? '#8F84A0' : COMPARE_COLOR_B,
+                opacity: muted ? 1 : bWin ? 1 : round.winner === 'a' ? 0.55 : 1,
+                bold: bWin,
+                align: 'right',
+              }),
             },
-            round.bDisplay,
+            bText,
           ),
-        ),
-      ),
-    ),
-    h(
-      'div',
-      {
-        style: {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 24,
-          width: '100%',
-        },
-      },
+        )
+      }),
       h(
         'div',
         {
           style: {
             display: 'flex',
-            fontSize: 48,
-            fontWeight: 700,
-            letterSpacing: '-0.03em',
-            color: '#F2C46D',
+            marginTop: 12,
+            fontSize: 26,
+            color: '#B9A6CB',
           },
         },
-        score.headline,
-      ),
-      h(
-        'div',
-        { style: { display: 'flex', fontSize: 28, color: '#B9A6CB' } },
         SHARE_IMAGE_FOOTER,
       ),
     ),
