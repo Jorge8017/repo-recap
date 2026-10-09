@@ -1,18 +1,26 @@
-import { formatAccountAge } from '../../lib/stats'
+import { formatAccountAgeParts } from '../../lib/stats'
 import type { SlideProps } from '../../types'
-import { Headline, SlideShell } from './SlideShell'
+import { SlideShell } from './SlideShell'
 
 export function AgeSlide({ stats }: SlideProps) {
-  const age = formatAccountAge(stats.accountAgeYears)
+  const { value, unit } = formatAccountAgeParts(stats.accountAgeYears)
 
   return (
     <SlideShell
-      announcement={`Building in public for ${age}, since ${stats.joinYear}.`}
+      announcement={`Building in public for ${value} ${unit}, since ${stats.joinYear}.`}
       gradient="bg-gradient-to-br from-[#0c2428] via-[#123e48] to-[#2a8f86]"
-      footer={<span>Joined {stats.joinYear}</span>}
+      pinBottom={false}
     >
-      <p className="mb-3 text-xl text-white/80">Building in public for</p>
-      <Headline>{age}</Headline>
+      <p className="text-[24px] text-[#C9BFD6]">Building in public for</p>
+      <p className="mt-2 flex items-baseline gap-3">
+        <span className="text-[96px] leading-none font-bold tracking-[-0.04em] text-[#F4EDE2]">
+          {value}
+        </span>
+        <span className="text-[32px] leading-none font-bold tracking-[-0.04em] text-[#F4EDE2]">
+          {unit}
+        </span>
+      </p>
+      <p className="mt-3 text-[18px] text-[#C9BFD6]">Joined {stats.joinYear}</p>
     </SlideShell>
   )
 }

@@ -25,10 +25,10 @@ export function PersonalityIcon({ id, size = 64 }: PersonalityIconProps) {
       )
     case 'ghost-mode':
       return (
-        <svg {...svg} fill="none" stroke={GOLD} strokeWidth="1.8" strokeLinejoin="round">
-          <path d="M8 10.2a4 4 0 0 1 8 0V19l-2-1.5-2 1.5-2-1.5-2 1.5z" />
-          <circle cx="10.3" cy="11.2" r="0.85" fill={GOLD} stroke="none" />
-          <circle cx="13.7" cy="11.2" r="0.85" fill={GOLD} stroke="none" />
+        <svg {...svg} fill="none" stroke={GOLD} strokeWidth="1.7" strokeLinejoin="round">
+          <path d="M5 9.2a7 7 0 0 1 14 0V20.8l-3.5-2.4-3.5 2.4-3.5-2.4L5 20.8z" />
+          <circle cx="9.4" cy="11.4" r="1.15" fill={GOLD} stroke="none" />
+          <circle cx="14.6" cy="11.4" r="1.15" fill={GOLD} stroke="none" />
         </svg>
       )
     case 'polyglot':

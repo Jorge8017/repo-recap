@@ -33,21 +33,28 @@ export function formatHourLabel(hour: number): string {
   return `${normalized}:00 ${period}`
 }
 
-export function formatAccountAge(years: number): string {
+export function formatAccountAgeParts(years: number): {
+  value: string
+  unit: string
+} {
   if (years < 1) {
     const months = Math.max(1, Math.round(years * 12))
-    return months === 1 ? '1 month' : `${months} months`
+    return { value: String(months), unit: months === 1 ? 'month' : 'months' }
   }
   if (years < 10) {
     const rounded = Math.round(years * 10) / 10
     if (Math.abs(rounded - Math.round(rounded)) < 0.05) {
       const whole = Math.round(rounded)
-      return whole === 1 ? '1 year' : `${whole} years`
+      return { value: String(whole), unit: whole === 1 ? 'year' : 'years' }
     }
-    return `${rounded.toFixed(1)} years`
+    return { value: rounded.toFixed(1), unit: 'years' }
   }
-  const whole = Math.floor(years)
-  return `${whole} years`
+  return { value: String(Math.floor(years)), unit: 'years' }
+}
+
+export function formatAccountAge(years: number): string {
+  const { value, unit } = formatAccountAgeParts(years)
+  return `${value} ${unit}`
 }
 
 export function formatCount(value: number): string {

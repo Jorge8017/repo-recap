@@ -1,5 +1,5 @@
 import { LANGUAGE_BAR_COLORS } from '../lib/slideMeta'
-import { formatCount } from '../lib/stats'
+import { formatAccountAge, formatCount } from '../lib/stats'
 import type { Personality, RecapStats } from '../types'
 import { PersonalityIcon } from './PersonalityIcon'
 
@@ -22,9 +22,10 @@ export function ShareCard({
   const languages = stats.topLanguages.slice(0, 3)
   const used = languages.reduce((sum, language) => sum + language.percentage, 0)
   const rest = Math.max(0, 100 - used)
-  const showStars = stats.totalStars > 0
-  const showStreak = stats.longestStreak > 0
-  const showDay = Boolean(stats.busiestDay)
+  const ghostCard = personality.id === 'ghost-mode' || stats.isEmptyProfile
+  const showStars = !ghostCard && stats.totalStars > 0
+  const showStreak = !ghostCard && stats.longestStreak > 0
+  const showDay = !ghostCard && Boolean(stats.busiestDay)
   const host = siteOrigin.replace(/^https?:\/\//, '')
   const initial = (stats.displayName.trim()[0] ?? stats.username[0] ?? '?').toUpperCase()
 
@@ -157,6 +158,16 @@ export function ShareCard({
             borderTop: '1px solid rgba(255,255,255,0.14)',
           }}
         >
+          {ghostCard ? (
+            <>
+              <ShareStat
+                label="On GitHub"
+                value={formatAccountAge(stats.accountAgeYears)}
+              />
+              <ShareStat label="Joined" value={String(stats.joinYear)} />
+              <ShareStat label="Public repos" value="Private" />
+            </>
+          ) : null}
           {showStars ? (
             <ShareStat label="Stars" value={formatCount(stats.totalStars)} />
           ) : null}

@@ -6,6 +6,7 @@ interface SlideShellProps {
   children: ReactNode
   fill?: boolean
   footer?: ReactNode
+  pinBottom?: boolean
 }
 
 export function SlideShell({
@@ -14,6 +15,7 @@ export function SlideShell({
   children,
   fill = false,
   footer,
+  pinBottom = true,
 }: SlideShellProps) {
   return (
     <section
@@ -35,18 +37,18 @@ export function SlideShell({
       >
         {children}
       </div>
-      {footer ? (
+      {pinBottom && footer ? (
         <div className="relative z-10 flex shrink-0 items-end justify-between gap-4 pt-4 text-[13px] text-[#E9B9A0]">
           <div>{footer}</div>
           <span className="font-mono text-[11px] tracking-[0.1em] text-[#E9B9A0]/80 uppercase lg:hidden">
             Tap → next
           </span>
         </div>
-      ) : (
+      ) : pinBottom ? (
         <p className="relative z-10 shrink-0 pt-3 text-right font-mono text-[11px] tracking-[0.1em] text-white/45 uppercase lg:hidden">
           Tap → next
         </p>
-      )}
+      ) : null}
     </section>
   )
 }

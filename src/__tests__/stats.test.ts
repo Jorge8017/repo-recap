@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildRecapStats,
   formatAccountAge,
+  formatAccountAgeParts,
   formatHourLabel,
   longestActiveStreak,
   mostRecentlyActiveRepoFrom,
@@ -81,6 +82,11 @@ describe('formatAccountAge', () => {
     expect(formatAccountAge(4)).toBe('4 years')
     expect(formatAccountAge(2.4)).toBe('2.4 years')
     expect(formatAccountAge(12.9)).toBe('12 years')
+  })
+
+  it('splits the number from the unit for hero stats', () => {
+    expect(formatAccountAgeParts(6)).toEqual({ value: '6', unit: 'years' })
+    expect(formatAccountAgeParts(1)).toEqual({ value: '1', unit: 'year' })
   })
 })
 
