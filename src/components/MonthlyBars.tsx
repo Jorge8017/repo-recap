@@ -66,7 +66,7 @@ export const MonthlyBars = memo(function MonthlyBars({
               className="relative flex h-full min-w-0 flex-col justify-end"
             >
               {month.isBest && month.total > 0 ? (
-                <span className="absolute inset-x-0 bottom-full mb-1 text-center font-mono text-[12px] text-[#F2C46D]">
+                <span className="monthly-bar-count absolute inset-x-0 bottom-full mb-1 text-center font-mono text-[12px] text-[#F2C46D]">
                   {formatCount(month.total)}
                 </span>
               ) : null}

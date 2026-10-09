@@ -428,20 +428,64 @@ async function assertHeroStatsVisibleOnEverySlide(page: Page) {
   }
 }
 
+const MONTHLY_BARS_VISIBLE_VIEWPORTS = [
+  { width: 1440, height: 900 },
+  { width: 1366, height: 680 },
+  { width: 1280, height: 620 },
+  { width: 1920, height: 940 },
+  { width: 390, height: 844 },
+] as const
+
+async function assertYearBarsVisibleStable(page: Page) {
+  await assertMonthlyBarsInsideCard(page)
+  await pausePlayback(page)
+  await assertSlideMountedOnce(page, 'year')
+
+  const value = page.getByTestId('hero-stat-value')
+  await expect(value).toBeVisible()
+  await waitForStableBoundingBox(page, 'hero-stat-value')
+  const samples: Array<{ x: number; y: number }> = []
+  for (let i = 0; i < 12; i += 1) {
+    const box = await value.boundingBox()
+    expect(box).toBeTruthy()
+    if (box) samples.push({ x: box.x, y: box.y })
+    await page.waitForTimeout(80)
+  }
+  const origin = samples[0]!
+  for (const sample of samples) {
+    expect(Math.abs(sample.x - origin.x)).toBeLessThanOrEqual(1)
+    expect(Math.abs(sample.y - origin.y)).toBeLessThanOrEqual(1)
+  }
+}
+
 test.describe('monthly bars', () => {
   test.use({
     timezoneId: 'UTC',
     reducedMotion: 'reduce',
   })
 
-  test('fits inside the card at 1440px', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await assertMonthlyBarsInsideCard(page)
-  })
+  for (const viewport of MONTHLY_BARS_VISIBLE_VIEWPORTS) {
+    test(`visible + stable at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      test.setTimeout(90_000)
+      await page.setViewportSize(viewport)
+      await assertYearBarsVisibleStable(page)
+    })
+  }
 
-  test('fits inside the card at 390px', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 })
-    await assertMonthlyBarsInsideCard(page)
+  test('hidden at 844x390 landscape phone', async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 })
+    await mockRecapApi(page, fixture)
+    await page.goto('/u/octocat')
+    await expect(
+      page.getByRole('heading', { name: /your recap is ready/i }),
+    ).toBeVisible({ timeout: 15_000 })
+    await page.evaluate(() => document.fonts.ready)
+    await goToSlideWithText(page, 'Your last 12 months')
+    await expect(page.getByTestId('slide-year')).toBeVisible()
+    await expect(page.getByTestId('monthly-bars')).toBeHidden()
+    await expect(page.getByTestId('chart-slot')).toBeHidden()
   })
 })
 
@@ -616,7 +660,11 @@ test.describe('slide mount stability', () => {
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 1440, height: 620 },
+    { width: 1366, height: 680 },
+    { width: 1280, height: 620 },
+    { width: 1920, height: 940 },
     { width: 390, height: 700 },
+    { width: 390, height: 844 },
   ] as const) {
     test(`every slide mounts once at ${viewport.width}x${viewport.height}`, async ({
       page,
@@ -634,13 +682,20 @@ test.describe('year hero position stability', () => {
     reducedMotion: 'reduce',
   })
 
-  test('hero value stays put at 1440x620', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 620 })
-    await assertYearHeroPositionStable(page)
-  })
-
-  test('hero value stays put at 1440x900', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await assertYearHeroPositionStable(page)
-  })
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1440, height: 620 },
+    { width: 1366, height: 680 },
+    { width: 1280, height: 620 },
+    { width: 1920, height: 940 },
+    { width: 390, height: 844 },
+  ] as const) {
+    test(`hero value stays put at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      test.setTimeout(60_000)
+      await page.setViewportSize(viewport)
+      await assertYearHeroPositionStable(page)
+    })
+  }
 })
