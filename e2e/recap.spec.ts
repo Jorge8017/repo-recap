@@ -218,12 +218,15 @@ test('plays a mocked recap through to the downloadable share card', async ({
     timeout: 15_000,
   })
 
-  for (let step = 0; step < 14; step += 1) {
+  const preview = page.getByTestId('share-card-preview')
+  for (let step = 0; step < 16; step += 1) {
+    if (await preview.isVisible()) break
     await page.keyboard.press('ArrowRight')
+    await page.waitForTimeout(400)
   }
 
-  const preview = page.getByTestId('share-card-preview')
-  await expect(preview.getByText('Builder')).toBeVisible()
+  await expect(preview.getByTestId('share-card-title')).toHaveText('Builder')
+  await expect(preview.getByTestId('share-card-title')).toBeVisible()
   await expect(
     page.getByRole('button', { name: /download image|save image/i }),
   ).toBeVisible()
