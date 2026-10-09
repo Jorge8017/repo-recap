@@ -594,14 +594,14 @@ export function CompareScoreSlide({
 
   return (
     <section
-      className="relative flex h-full min-h-0 flex-col overflow-hidden px-5 pb-4 pt-[calc(var(--story-chrome,5.75rem)+16px)] lg:px-8"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden px-5 pb-3 pt-[calc(var(--story-chrome,5.75rem)+12px)] lg:px-8"
       data-testid="compare-score"
       aria-label={score.headline}
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <PlayerAvatar src={avatarA} side="a" size={56} />
+            <PlayerAvatar src={avatarA} side="a" size={52} />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold lg:text-base">
                 {a.stats.displayName}
@@ -615,7 +615,7 @@ export function CompareScoreSlide({
           {score.enoughData ? (
             <p
               data-testid="compare-score-digits"
-              className="shrink-0 font-bold tracking-[-0.05em] text-[56px] leading-none lg:text-[72px]"
+              className="shrink-0 font-bold tracking-[-0.05em] text-[52px] leading-none lg:text-[64px]"
             >
               <span style={{ color: COMPARE_COLOR_A, opacity: aDim ? 0.72 : 1 }}>
                 {score.aWins}
@@ -630,7 +630,7 @@ export function CompareScoreSlide({
           )}
 
           <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-2.5">
-            <PlayerAvatar src={avatarB} side="b" size={56} />
+            <PlayerAvatar src={avatarB} side="b" size={52} />
             <div className="min-w-0 text-right">
               <p className="truncate text-sm font-semibold lg:text-base">
                 {b.stats.displayName}
@@ -644,12 +644,12 @@ export function CompareScoreSlide({
 
         <p
           data-testid="compare-hero"
-          className="mt-3 shrink-0 text-center text-[18px] leading-snug text-[#F4EDE2] lg:text-[22px] [@media(max-height:740px)]:hidden [@container(max-height:520px)]:hidden"
+          className="mt-2 shrink-0 text-center text-[17px] leading-snug text-[#F4EDE2] lg:text-[20px] [@media(max-height:740px)]:hidden [@container(max-height:560px)]:hidden"
         >
           {score.headline}
         </p>
 
-        <ul className="mt-3 shrink-0">
+        <ul className="mt-2 min-h-0 shrink">
           {score.rounds.map((round) => {
             const muted = !round.comparable
             const aWin = round.comparable && round.winner === 'a'
@@ -657,10 +657,10 @@ export function CompareScoreSlide({
             return (
               <li
                 key={round.id}
-                className="grid h-11 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-white/8 text-sm"
+                className="grid h-10 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-white/8 text-sm last:border-b-0"
               >
                 <span
-                  className="min-w-0 truncate"
+                  className="min-w-0 truncate leading-none"
                   style={{
                     color: muted
                       ? '#8F84A0'
@@ -675,7 +675,7 @@ export function CompareScoreSlide({
                 >
                   {round.aDisplay}
                 </span>
-                <span className="flex min-w-0 flex-col items-center px-1 text-center">
+                <span className="flex min-w-0 flex-col items-center px-1 text-center leading-tight">
                   <span className="font-mono text-[11px] tracking-[0.12em] text-[#8F84A0] uppercase">
                     {round.label}
                   </span>
@@ -686,7 +686,7 @@ export function CompareScoreSlide({
                   ) : null}
                 </span>
                 <span
-                  className="min-w-0 truncate text-right"
+                  className="min-w-0 truncate text-right leading-none"
                   style={{
                     color: muted
                       ? '#8F84A0'
@@ -707,11 +707,11 @@ export function CompareScoreSlide({
         </ul>
       </div>
 
-      <div className="mt-3 flex shrink-0 flex-col gap-2">
+      <div className="mt-2 flex shrink-0 flex-col gap-1.5 pt-1">
         <button
           type="button"
           data-testid="compare-download"
-          className="inline-flex h-11 items-center justify-center rounded-[14px] bg-[#F4EDE2] px-4 font-semibold text-[#1A0B22]"
+          className="inline-flex h-10 items-center justify-center rounded-[14px] bg-[#F4EDE2] px-4 font-semibold text-[#1A0B22]"
           onClick={() => void onDownload()}
           disabled={downloading}
         >
@@ -720,12 +720,12 @@ export function CompareScoreSlide({
         <button
           type="button"
           data-testid="compare-copy-link"
-          className="inline-flex h-11 items-center justify-center rounded-[14px] border border-white/20 bg-white/5 px-4 font-semibold"
+          className="inline-flex h-10 items-center justify-center rounded-[14px] border border-white/20 bg-white/5 px-4 font-semibold"
           onClick={() => void onCopyLink()}
         >
           Copy link
         </button>
-        <div className="flex items-center justify-center gap-5 pt-0.5 text-sm text-[#C9BFD6]">
+        <div className="flex items-center justify-center gap-5 text-sm text-[#C9BFD6]">
           <button
             type="button"
             className="underline-offset-2 hover:text-[#F4EDE2] hover:underline"
