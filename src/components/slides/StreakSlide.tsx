@@ -1,6 +1,6 @@
 import { CountUp } from '../CountUp'
 import type { SlideProps } from '../../types'
-import { Headline, Kicker, SlideShell } from './SlideShell'
+import { Headline, SlideShell } from './SlideShell'
 
 export function StreakSlide({ stats, reducedMotion }: SlideProps) {
   const showStreak = stats.longestStreak > 0
@@ -20,8 +20,12 @@ export function StreakSlide({ stats, reducedMotion }: SlideProps) {
     <SlideShell
       announcement={announcementParts.join(': ')}
       gradient="bg-gradient-to-br from-[#2a0818] via-[#6b1438] to-[#c43b5c]"
+      footer={
+        stats.mostActiveRepoInWindow ? (
+          <span>Most active: {stats.mostActiveRepoInWindow.name}</span>
+        ) : undefined
+      }
     >
-      <Kicker>Last 90 days</Kicker>
       {showStreak ? (
         <>
           <p className="mb-2 text-xl text-white/80">Longest active streak</p>
@@ -42,7 +46,7 @@ export function StreakSlide({ stats, reducedMotion }: SlideProps) {
       )}
       {showStreak && showCommits ? (
         <div className="mt-10">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/65">
+          <p className="font-mono text-[11px] tracking-[0.16em] text-white/65 uppercase">
             Commits pushed
           </p>
           <CountUp
@@ -51,14 +55,6 @@ export function StreakSlide({ stats, reducedMotion }: SlideProps) {
             className="mt-1 block text-5xl font-bold text-[#ffd4de]"
           />
         </div>
-      ) : null}
-      {stats.mostActiveRepoInWindow ? (
-        <p className="mt-6 text-white/75">
-          Most active repo:{' '}
-          <span className="font-semibold text-white">
-            {stats.mostActiveRepoInWindow.name}
-          </span>
-        </p>
       ) : null}
     </SlideShell>
   )

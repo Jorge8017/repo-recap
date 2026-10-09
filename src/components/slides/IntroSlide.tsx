@@ -1,5 +1,5 @@
 import type { SlideProps } from '../../types'
-import { Headline, Kicker, SlideShell } from './SlideShell'
+import { SlideShell } from './SlideShell'
 
 export function IntroSlide({ stats, avatarSrc }: SlideProps) {
   return (
@@ -12,15 +12,14 @@ export function IntroSlide({ stats, avatarSrc }: SlideProps) {
         alt=""
         width={96}
         height={96}
-        className="mb-8 h-24 w-24 rounded-3xl object-cover shadow-[0_16px_40px_rgba(0,0,0,0.35)] ring-4 ring-white/20"
+        className="mb-5 h-16 w-16 rounded-2xl object-cover shadow-[0_16px_40px_rgba(0,0,0,0.35)] ring-2 ring-white/20 lg:h-20 lg:w-20 lg:rounded-3xl"
       />
-      <Kicker>Repo Recap</Kicker>
-      <Headline>
+      <h2 className="text-[clamp(1.75rem,4.5vh,2.6rem)] leading-[1.05] font-bold tracking-[-0.03em]">
         {stats.displayName},
         <br />
         your recap is ready.
-      </Headline>
-      <p className="mt-4 text-lg text-white/75">@{stats.username}</p>
+      </h2>
+      <p className="mt-4 text-lg text-white/70">@{stats.username}</p>
     </SlideShell>
   )
 }

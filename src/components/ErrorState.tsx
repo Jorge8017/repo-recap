@@ -7,6 +7,7 @@ import {
   presentRecapError,
   type RecapErrorKind,
 } from '../lib/errorCopy'
+import { BrandLink } from './Logo'
 import { UiButton } from './UiButton'
 
 interface ErrorStateProps {
@@ -25,10 +26,19 @@ export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
         : presentRecapError(error)
 
   return (
-    <div className="relative flex h-full min-h-dvh flex-col bg-gradient-to-br from-[#1a1020] via-[#3a1528] to-[#6b2438] px-7 pt-24 pb-16">
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+    <div
+      className="flex min-h-dvh flex-col"
+      style={{
+        background:
+          'radial-gradient(700px 520px at 50% 50%, rgba(196,59,92,0.28), transparent 70%), #0B0812',
+      }}
+    >
+      <header className="flex items-center justify-between px-5 py-5 lg:px-10 lg:py-6">
+        <BrandLink />
+      </header>
+      <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-end px-7 pt-10 pb-16 lg:justify-center">
         <motion.span
-          className="block text-[96px] leading-none"
+          className="mb-8 block text-[96px] leading-none"
           aria-hidden="true"
           animate={reducedMotion ? undefined : { y: [0, -12, 0] }}
           transition={
@@ -39,23 +49,19 @@ export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
         >
           {copy.emoji}
         </motion.span>
-      </div>
-      <div>
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
+        <p className="mb-3 font-mono text-[11px] tracking-[0.16em] text-[#F2C46D] uppercase">
           {copy.eyebrow}
         </p>
         <h1 className="text-4xl leading-tight font-bold">{copy.headline}</h1>
-        <p className="mt-4 max-w-[28ch] text-lg text-white/85">{copy.body}</p>
+        <p className="mt-4 max-w-[28ch] text-lg text-[#C9BFD6]">{copy.body}</p>
         <div className="mt-10 flex flex-wrap gap-3">
-          {onRetry ? (
-            <UiButton onClick={onRetry}>Retry</UiButton>
-          ) : null}
+          {onRetry ? <UiButton onClick={onRetry}>Retry</UiButton> : null}
           <Link
             to="/"
             className={
               onRetry
-                ? 'inline-flex w-fit rounded-full border border-white/25 bg-white/10 px-5 py-3 font-semibold text-white transition-transform duration-150 hover:bg-white/20 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f0c27a]'
-                : 'inline-flex w-fit rounded-full bg-[#f6efe4] px-5 py-3 font-semibold text-[#1a1020] transition-transform duration-150 hover:bg-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f0c27a]'
+                ? 'inline-flex w-fit items-center rounded-[14px] border border-[rgba(244,237,226,0.22)] bg-white/[0.04] px-5 py-3 font-semibold text-[#F4EDE2] transition-transform duration-150 hover:bg-white/10 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F2C46D]'
+                : 'inline-flex w-fit items-center rounded-[14px] bg-[#F4EDE2] px-5 py-3 font-semibold text-[#1A0B22] transition-transform duration-150 hover:bg-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F2C46D]'
             }
           >
             Try another username

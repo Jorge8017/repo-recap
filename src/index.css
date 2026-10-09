@@ -2,6 +2,19 @@
 
 @theme {
   --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --color-stage: #0b0812;
+  --color-ink: #f4ede2;
+  --color-gold: #f2c46d;
+  --color-gold-soft: #ffe2a6;
+  --color-muted: #c9bfd6;
+  --color-dim: #8f84a0;
+  --color-coral: #d95e3c;
+  --color-mint: #6fd3b8;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 html,
@@ -13,8 +26,8 @@ body,
 
 body {
   font-family: var(--font-sans);
-  background: #07060c;
-  color: #f6efe4;
+  background: #0b0812;
+  color: #f4ede2;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -28,11 +41,11 @@ a {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
-  outline: 2px solid #f0c27a;
+  outline: 2px solid #f2c46d;
   outline-offset: 2px;
 }
 
 ::selection {
-  background: rgba(240, 194, 122, 0.35);
-  color: #f6efe4;
+  background: rgba(242, 196, 109, 0.35);
+  color: #f4ede2;
 }

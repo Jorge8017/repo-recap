@@ -16,13 +16,13 @@ export function UiButton({
 }: UiButtonProps) {
   const palette =
     variant === 'primary'
-      ? 'bg-[#f6efe4] text-[#1a1020] hover:bg-white'
-      : 'border border-white/25 bg-white/10 text-white hover:bg-white/20'
+      ? 'bg-[#F4EDE2] text-[#1A0B22] hover:bg-white'
+      : 'border border-[rgba(244,237,226,0.22)] bg-white/[0.04] text-[#F4EDE2] hover:bg-white/10'
 
   return (
     <button
       type={type}
-      className={`rounded-full px-5 py-3 font-semibold transition-transform duration-150 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f0c27a] disabled:pointer-events-none disabled:opacity-60 ${palette} ${className}`}
+      className={`inline-flex items-center justify-center gap-2.5 rounded-[14px] px-5 py-3 font-semibold transition-transform duration-150 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F2C46D] disabled:pointer-events-none disabled:opacity-60 ${palette} ${className}`}
       {...props}
     >
       {children}

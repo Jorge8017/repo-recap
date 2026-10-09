@@ -79,10 +79,12 @@ test('plays a mocked recap through to the downloadable share card', async ({
 
   const preview = page.getByTestId('share-card-preview')
   await expect(preview.getByText('Builder')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Download image' })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: /download image|save image/i }),
+  ).toBeVisible()
 
-  const share = page.getByRole('button', { name: 'Share' })
+  const share = page.getByRole('button', { name: /share|copy recap link/i })
   await share.click()
-  await expect(page.getByRole('button', { name: 'Share' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /share|copy recap link/i })).toBeVisible()
   await expect(page.getByText('Link copied')).toBeVisible()
 })

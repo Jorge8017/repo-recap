@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import type { SlideProps } from '../../types'
-import { Headline, Kicker, SlideShell } from './SlideShell'
+import { Headline, SlideShell } from './SlideShell'
 
 export function QuietSlide({ reducedMotion }: SlideProps) {
   return (
@@ -19,7 +19,6 @@ export function QuietSlide({ reducedMotion }: SlideProps) {
         <span className="text-7xl">👻</span>
         <span className="text-5xl">🫧</span>
       </motion.div>
-      <Kicker>Quiet Mode</Kicker>
       <Headline>Your public profile is a blank canvas.</Headline>
       <p className="mt-5 max-w-[24ch] text-lg leading-snug text-white/80">
         Most work happens in private repos — publish a project to unlock your

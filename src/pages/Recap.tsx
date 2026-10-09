@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
-import { PhoneFrame } from '../components/PhoneFrame'
 import { StoryPlayer } from '../components/StoryPlayer'
 import { useRecap } from '../hooks/useRecap'
 import { avatarToDataUrl } from '../lib/avatar'
@@ -56,20 +55,22 @@ export function Recap() {
 
   const recapReady = Boolean(query.data) && avatarReady
 
-  return (
-    <PhoneFrame>
-      {!valid ? (
-        <ErrorState kind="not_found" />
-      ) : recapReady && query.data ? (
-        <StoryPlayer
-          recap={query.data}
-          avatarSrc={avatarSrc ?? query.data.stats.avatarUrl}
-        />
-      ) : query.isError ? (
-        <ErrorState error={query.error} onRetry={() => void query.refetch()} />
-      ) : (
-        <LoadingState />
-      )}
-    </PhoneFrame>
-  )
+  if (!valid) {
+    return <ErrorState kind="not_found" />
+  }
+
+  if (recapReady && query.data) {
+    return (
+      <StoryPlayer
+        recap={query.data}
+        avatarSrc={avatarSrc ?? query.data.stats.avatarUrl}
+      />
+    )
+  }
+
+  if (query.isError) {
+    return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+  }
+
+  return <LoadingState />
 }
