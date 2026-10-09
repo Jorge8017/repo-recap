@@ -1,7 +1,6 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { fetchAvatarDataUri } from './_lib/cardSvg.js'
+import { ImageResponse } from '@vercel/og'
+import { fetchAvatarDataUri } from './_lib/avatarDataUri.js'
 import { buildAuthenticatedRecap } from './_lib/github.js'
-import { createOgImageResponse } from './_lib/ogImageResponse.js'
 import {
   buildShareCardElement,
   SHARE_IMAGE_HEIGHT,
@@ -9,69 +8,43 @@ import {
 } from './_lib/shareCardElement.js'
 import { loadShareFonts } from './_lib/shareFonts.js'
 
+export const config = { runtime: 'edge' }
+
 const CACHE_OK = 'public, s-maxage=21600, stale-while-revalidate=86400'
 
-function readQuery(req: VercelRequest, key: string): string | undefined {
-  const raw = req.query[key]
-  if (typeof raw === 'string') return raw
-  if (Array.isArray(raw) && typeof raw[0] === 'string') return raw[0]
-  const path = req.url
-  if (!path) return undefined
-  try {
-    return new URL(path, 'http://localhost').searchParams.get(key) ?? undefined
-  } catch {
-    return undefined
-  }
+function errorResponse(status: 400 | 404 | 429 | 405 | 500): Response {
+  const body =
+    status === 400
+      ? 'Bad Request'
+      : status === 404
+        ? 'Not Found'
+        : status === 429
+          ? 'Too Many Requests'
+          : status === 405
+            ? 'Method Not Allowed'
+            : 'Internal Server Error'
+  return new Response(body, {
+    status,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store',
+    },
+  })
 }
 
-function sendError(res: VercelResponse, status: 400 | 404 | 429 | 405): void {
-  res.status(status)
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-  res.setHeader('Cache-Control', 'no-store')
-  // No user data in error responses.
-  if (status === 400) {
-    res.send('Bad Request')
-    return
-  }
-  if (status === 404) {
-    res.send('Not Found')
-    return
-  }
-  if (status === 429) {
-    res.send('Too Many Requests')
-    return
-  }
-  res.send('Method Not Allowed')
-}
-
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<void> {
-  if (req.method && req.method !== 'GET') {
-    sendError(res, 405)
-    return
+export default async function handler(req: Request): Promise<Response> {
+  if (req.method !== 'GET') {
+    return errorResponse(405)
   }
 
   const token = process.env.GITHUB_TOKEN
-  const result = await buildAuthenticatedRecap(readQuery(req, 'u'), token)
+  const username = new URL(req.url).searchParams.get('u') ?? undefined
+  const result = await buildAuthenticatedRecap(username, token)
 
-  if (result.status === 400) {
-    sendError(res, 400)
-    return
-  }
-  if (result.status === 404) {
-    sendError(res, 404)
-    return
-  }
-  if (result.status === 429) {
-    sendError(res, 429)
-    return
-  }
-  if (result.status !== 200) {
-    sendError(res, 404)
-    return
-  }
+  if (result.status === 400) return errorResponse(400)
+  if (result.status === 404) return errorResponse(404)
+  if (result.status === 429) return errorResponse(429)
+  if (result.status !== 200) return errorResponse(404)
 
   try {
     const avatarDataUri = await fetchAvatarDataUri(
@@ -79,28 +52,19 @@ export default async function handler(
       token,
     )
     const element = buildShareCardElement(result.body, avatarDataUri)
-    const image = await createOgImageResponse(element, {
+    const fonts = await loadShareFonts()
+
+    return new ImageResponse(element, {
       width: SHARE_IMAGE_WIDTH,
       height: SHARE_IMAGE_HEIGHT,
-      fonts: loadShareFonts(),
+      fonts,
+      headers: {
+        'Cache-Control': CACHE_OK,
+        Vary: 'Accept-Encoding',
+      },
     })
-
-    const buffer = Buffer.from(await image.arrayBuffer())
-    if (token && buffer.toString('utf8').includes(token)) {
-      sendError(res, 404)
-      return
-    }
-
-    res.status(200)
-    res.setHeader('Content-Type', 'image/png')
-    res.setHeader('Cache-Control', CACHE_OK)
-    res.setHeader('Vary', 'Accept-Encoding')
-    res.send(buffer)
   } catch (error) {
     console.error('share-image failed', error)
-    res.status(500)
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-    res.setHeader('Cache-Control', 'no-store')
-    res.send('Internal Server Error')
+    return errorResponse(500)
   }
 }

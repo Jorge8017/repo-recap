@@ -2,8 +2,11 @@ import { assignPersonality } from '../../src/lib/personality.js'
 import { LANGUAGE_BAR_COLORS } from '../../src/lib/slideMeta.js'
 import { formatCount, buildRecapStats } from '../../src/lib/stats.js'
 import type { CachedRecapPayload, PersonalityId } from '../../src/types.js'
+import { fetchAvatarDataUri } from './avatarDataUri.js'
 import { c1LogoMarkup, personalityIconMarkup } from './personalityIconSvg.js'
 import { escapeXml, truncateEllipsis } from './xml.js'
+
+export { fetchAvatarDataUri }
 
 export type CardTheme = 'dark' | 'light'
 
@@ -98,28 +101,6 @@ export function statusCardSvg(
   <g opacity="0.9">${c1LogoMarkup(CARD_PADDING, 168, 16, colors.text)}</g>
   <text x="42" y="181" font-family='${MONO}' font-size="11" fill="${colors.muted}">recap.jordanshears.com</text>
 </svg>`
-}
-
-export async function fetchAvatarDataUri(
-  avatarUrl: string,
-  token: string | undefined,
-): Promise<string | null> {
-  try {
-    const headers: Record<string, string> = {
-      Accept: 'image/*',
-      'User-Agent': 'repo-recap-card',
-    }
-    if (token) headers.Authorization = `Bearer ${token}`
-    const response = await fetch(avatarUrl, { headers })
-    if (!response.ok) return null
-    const contentType = response.headers.get('content-type') ?? 'image/png'
-    if (!contentType.startsWith('image/')) return null
-    const buffer = Buffer.from(await response.arrayBuffer())
-    if (buffer.byteLength === 0 || buffer.byteLength > 1_500_000) return null
-    return `data:${contentType};base64,${buffer.toString('base64')}`
-  } catch {
-    return null
-  }
 }
 
 function avatarMarkup(

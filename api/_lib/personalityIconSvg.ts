@@ -1,4 +1,5 @@
 import type { PersonalityId } from '../../src/types.js'
+import { stringToBase64 } from './base64.js'
 
 /** Inline SVG mark for a personality, positioned at (x, y) with given size. */
 export function personalityIconMarkup(
@@ -36,7 +37,7 @@ export function personalityIconDataUri(
 ): string {
   const body = personalityIconMarkup(id, color, 24, 0, 0)
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 24 24">${body}</svg>`
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+  return `data:image/svg+xml;base64,${stringToBase64(svg)}`
 }
 
 export function c1LogoMarkup(
