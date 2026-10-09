@@ -44,3 +44,36 @@ export function slideKicker(index: number, count: number, id: SlideId): string {
 }
 
 export const LANGUAGE_BAR_COLORS = ['#F2C46D', '#F08A6C', '#6FD3B8', '#8AA4FF', '#D9A8FF']
+
+/** Stable per-language colours so the same language matches across compare bars. */
+const LANGUAGE_COLOR_BY_NAME: Record<string, string> = {
+  javascript: '#F2C46D',
+  typescript: '#F08A6C',
+  css: '#6FD3B8',
+  html: '#E8A0BF',
+  python: '#8AA4FF',
+  go: '#6FD3B8',
+  rust: '#F08A6C',
+  java: '#F2C46D',
+  ruby: '#E8A0BF',
+  php: '#8AA4FF',
+  c: '#D9A8FF',
+  'c++': '#D9A8FF',
+  'c#': '#8AA4FF',
+  swift: '#F08A6C',
+  kotlin: '#D9A8FF',
+  shell: '#6FD3B8',
+  vue: '#6FD3B8',
+  svelte: '#F08A6C',
+}
+
+export function languageBarColor(name: string): string {
+  const key = name.trim().toLowerCase()
+  const known = LANGUAGE_COLOR_BY_NAME[key]
+  if (known) return known
+  let hash = 0
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0
+  }
+  return LANGUAGE_BAR_COLORS[hash % LANGUAGE_BAR_COLORS.length] ?? LANGUAGE_BAR_COLORS[0]!
+}

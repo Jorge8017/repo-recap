@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router-dom'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import {
   compareSlideKicker,
+  compareSlideQualifier,
   planCompareSlides,
   type CompareSlideId,
 } from '../lib/compare'
@@ -123,7 +124,12 @@ export function ComparePlayer({
 
   const currentId: CompareSlideId = slides[index] ?? 'compare-intro'
   const isSummary = currentId === 'compare-score'
-  const kicker = compareSlideKicker(index, slides.length, currentId)
+  const kickerShort = compareSlideKicker(index, slides.length, currentId, {
+    short: true,
+  })
+  const kickerFull = compareSlideKicker(index, slides.length, currentId)
+  const qualifier = compareSlideQualifier(currentId)
+  const kicker = kickerFull
 
   useLayoutEffect(() => {
     const chrome = chromeRef.current
@@ -306,6 +312,7 @@ export function ComparePlayer({
     avatarA,
     avatarB,
     slideCount: slides.length,
+    qualifier,
     onReplay: replay,
     onSwap: swap,
     onDownload,
@@ -348,7 +355,7 @@ export function ComparePlayer({
         <div
           ref={cardRef}
           data-testid="story-card"
-          className="story-card relative flex h-full w-full min-h-0 flex-col overflow-hidden lg:h-[min(640px,calc(100dvh-180px))] lg:w-[min(860px,calc(100vw-160px))] lg:rounded-[32px] lg:shadow-[0_50px_100px_rgba(0,0,0,0.55)]"
+          className="story-card @container relative flex h-full w-full min-h-0 flex-col overflow-hidden lg:h-[min(640px,calc(100dvh-180px))] lg:w-[min(860px,calc(100vw-160px))] lg:rounded-[32px] lg:shadow-[0_50px_100px_rgba(0,0,0,0.55)]"
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
@@ -405,8 +412,9 @@ export function ComparePlayer({
               ))}
             </div>
             <div className="flex items-center justify-between gap-3 pt-3">
-              <p className="min-w-0 truncate font-mono text-[11px] tracking-[0.16em] text-[#FFC9A8] uppercase lg:text-xs">
-                {kicker}
+              <p className="min-w-0 font-mono text-[11px] tracking-[0.14em] text-[#FFC9A8] uppercase lg:truncate lg:text-xs lg:tracking-[0.16em]">
+                <span className="lg:hidden">{kickerShort}</span>
+                <span className="hidden lg:inline">{kickerFull}</span>
               </p>
               <div className="ml-auto flex shrink-0 gap-1.5">
                 {!isSummary ? (

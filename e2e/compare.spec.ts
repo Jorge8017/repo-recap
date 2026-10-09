@@ -228,8 +228,15 @@ async function playCompare(page: Page, path = '/vs/gaearon/sindresorhus') {
   }
 
   await expect(page.getByTestId('compare-score')).toBeVisible()
-  await expect(page.getByTestId('compare-hero')).toBeVisible()
   await expect(page.getByTestId('compare-download')).toBeVisible()
+  await expect(page.getByTestId('compare-copy-link')).toBeVisible()
+  const viewport = page.viewportSize()
+  // Verdict may hide on short viewports so buttons always fit.
+  if (viewport && viewport.height >= 740) {
+    await expect(page.getByTestId('compare-hero')).toBeVisible()
+  } else {
+    await expect(page.getByTestId('compare-hero')).toBeAttached()
+  }
 }
 
 test.describe('compare mode', () => {

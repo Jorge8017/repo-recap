@@ -246,6 +246,14 @@ export function formatMultiplier(ratio: number): string {
   return `${text}×`
 }
 
+/** True when both values are > 0 and within 5% of the larger value. */
+export function isNearEqual(a: number, b: number): boolean {
+  if (a <= 0 || b <= 0) return false
+  const hi = Math.max(a, b)
+  const lo = Math.min(a, b)
+  return (hi - lo) / hi <= 0.05
+}
+
 function privateStatVerdict(a: RecapStats, b: RecapStats, id: CompareRoundId): VerdictPart[] | null {
   const aPrivate = isMetricPrivate(a, id)
   const bPrivate = isMetricPrivate(b, id)
@@ -257,57 +265,97 @@ function privateStatVerdict(a: RecapStats, b: RecapStats, id: CompareRoundId): V
   return [{ text: `@${user} keeps this one private.`, tone: 'muted' }]
 }
 
-export function contributionsVerdict(a: RecapStats, b: RecapStats): VerdictPart[] {
-  const priv = privateStatVerdict(a, b, 'contributions')
-  if (priv) return priv
-  const side = compareMetric(a.totalContributions, b.totalContributions)
-  if (side === 'tie') return [{ text: 'Too close to call.' }]
-  const winner = side === 'a' ? a : b
-  const loser = side === 'a' ? b : a
-  const lo = loser.totalContributions
-  const hi = winner.totalContributions
-  if (lo === 0 || hi / lo < 1.15) return [{ text: 'Too close to call.' }]
-  const mult = formatMultiplier(hi / lo)
+function leadsByParts(
+  side: Exclude<CompareSide, 'tie'>,
+  winner: RecapStats,
+  delta: number,
+  unit: string,
+): VerdictPart[] {
+  const label = firstName(winner).toLowerCase()
+  const amount = `${formatCount(delta)}${unit ? ` ${unit}` : ''}`
   return [
-    { text: `${firstName(winner)} shipped ` },
-    { text: mult, tone: side },
-    { text: ' as many contributions this year.' },
-  ]
-}
-
-export function streakVerdict(a: RecapStats, b: RecapStats): VerdictPart[] {
-  const priv = privateStatVerdict(a, b, 'streak')
-  if (priv) return priv
-  const side = compareMetric(a.longestStreak, b.longestStreak)
-  if (side === 'tie') return [{ text: 'Too close to call.' }]
-  const winner = side === 'a' ? a : b
-  const loser = side === 'a' ? b : a
-  const delta = Math.abs(winner.longestStreak - loser.longestStreak)
-  if (delta === 0) return [{ text: 'Too close to call.' }]
-  const days = delta === 1 ? '1 day' : `${formatCount(delta)} days`
-  return [
-    { text: `${firstName(winner)}'s longest streak beats ${firstName(loser)}'s by ` },
-    { text: days, tone: side },
+    { text: `${label} leads by ` },
+    { text: amount, tone: side },
     { text: '.' },
   ]
 }
 
-export function starsVerdict(a: RecapStats, b: RecapStats): VerdictPart[] {
-  const priv = privateStatVerdict(a, b, 'stars')
+function metricVerdict(opts: {
+  a: RecapStats
+  b: RecapStats
+  id: CompareRoundId
+  aValue: number
+  bValue: number
+  unit: string
+  multiplierSentence: (mult: string, side: Exclude<CompareSide, 'tie'>, winner: RecapStats) => VerdictPart[]
+}): VerdictPart[] {
+  const priv = privateStatVerdict(opts.a, opts.b, opts.id)
   if (priv) return priv
-  const side = compareMetric(a.totalStars, b.totalStars)
-  if (side === 'tie') return [{ text: 'Too close to call.' }]
-  const winner = side === 'a' ? a : b
-  const loser = side === 'a' ? b : a
-  const lo = loser.totalStars
-  const hi = winner.totalStars
-  if (lo === 0 || hi / lo < 1.15) return [{ text: 'Too close to call.' }]
-  const mult = formatMultiplier(hi / lo)
-  return [
-    { text: `${firstName(winner)} earned ` },
-    { text: mult, tone: side },
-    { text: ' as many stars.' },
-  ]
+  const side = compareMetric(opts.aValue, opts.bValue)
+  if (side === 'tie' || isNearEqual(opts.aValue, opts.bValue)) {
+    return [{ text: 'Too close to call.' }]
+  }
+  const winner = side === 'a' ? opts.a : opts.b
+  const hi = side === 'a' ? opts.aValue : opts.bValue
+  const lo = side === 'a' ? opts.bValue : opts.aValue
+  const delta = hi - lo
+  if (lo === 0) {
+    return leadsByParts(side, winner, delta, opts.unit)
+  }
+  return opts.multiplierSentence(formatMultiplier(hi / lo), side, winner)
+}
+
+export function contributionsVerdict(a: RecapStats, b: RecapStats): VerdictPart[] {
+  return metricVerdict({
+    a,
+    b,
+    id: 'contributions',
+    aValue: a.totalContributions,
+    bValue: b.totalContributions,
+    unit: 'contributions',
+    multiplierSentence: (mult, side, winner) => [
+      { text: `${firstName(winner)} shipped ` },
+      { text: mult, tone: side },
+      { text: ' as many contributions this year.' },
+    ],
+  })
+}
+
+export function streakVerdict(a: RecapStats, b: RecapStats): VerdictPart[] {
+  return metricVerdict({
+    a,
+    b,
+    id: 'streak',
+    aValue: a.longestStreak,
+    bValue: b.longestStreak,
+    unit: 'days',
+    multiplierSentence: (_mult, side, winner) => {
+      const loser = side === 'a' ? b : a
+      const delta = Math.abs(winner.longestStreak - loser.longestStreak)
+      const days = delta === 1 ? '1 day' : `${formatCount(delta)} days`
+      return [
+        { text: `${firstName(winner)}'s longest streak beats ${firstName(loser)}'s by ` },
+        { text: days, tone: side },
+        { text: '.' },
+      ]
+    },
+  })
+}
+
+export function starsVerdict(a: RecapStats, b: RecapStats): VerdictPart[] {
+  return metricVerdict({
+    a,
+    b,
+    id: 'stars',
+    aValue: a.totalStars,
+    bValue: b.totalStars,
+    unit: 'stars',
+    multiplierSentence: (mult, side, winner) => [
+      { text: `${firstName(winner)} earned ` },
+      { text: mult, tone: side },
+      { text: ' as many stars.' },
+    ],
+  })
 }
 
 export function proportionShares(
@@ -404,18 +452,19 @@ export function compareSlideCatalog(id: CompareSlideId): string {
   }
 }
 
-function compareSlideExtra(id: CompareSlideId): string | null {
+/** Short qualifier shown inside slide content (not in the mobile kicker). */
+export function compareSlideQualifier(id: CompareSlideId): string | null {
   switch (id) {
     case 'compare-contributions':
-      return 'LAST 12 MONTHS'
+      return 'Last 12 months'
     case 'compare-streak':
-      return 'LONGEST'
+      return 'Longest'
     case 'compare-stars':
-      return 'RECEIVED'
+      return 'Received'
     case 'compare-languages':
-      return 'TOP 3'
+      return 'Top 3'
     case 'compare-busiest':
-      return 'DAY + HOUR'
+      return 'Day + hour'
     default:
       return null
   }
@@ -425,13 +474,15 @@ export function compareSlideKicker(
   index: number,
   count: number,
   id: CompareSlideId,
+  opts: { short?: boolean } = {},
 ): string {
   const n = String(index + 1).padStart(2, '0')
   const total = String(count).padStart(2, '0')
   const catalog = compareSlideCatalog(id).toUpperCase()
-  const extra = compareSlideExtra(id)
+  if (opts.short) return `${n} / ${total} · ${catalog}`
+  const extra = compareSlideQualifier(id)
   return extra
-    ? `${n} / ${total} · ${catalog} · ${extra}`
+    ? `${n} / ${total} · ${catalog} · ${extra.toUpperCase()}`
     : `${n} / ${total} · ${catalog}`
 }
 

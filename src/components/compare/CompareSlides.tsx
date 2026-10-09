@@ -18,14 +18,14 @@ import {
   type CompareSide,
   type VerdictPart,
 } from '../../lib/compare'
-import { LANGUAGE_BAR_COLORS } from '../../lib/slideMeta'
+import { languageBarColor } from '../../lib/slideMeta'
 import type { RecapResult } from '../../types'
 import { FittedText } from '../FittedText'
 import { PersonalityIcon } from '../PersonalityIcon'
 import {
+  HandleWithChip,
   PlayerAvatar,
   ProportionBar,
-  SideStatus,
   VerdictLine,
   VsBadge,
   VsDivider,
@@ -39,6 +39,7 @@ export interface CompareSlideProps {
   avatarA: string
   avatarB: string
   slideCount: number
+  qualifier?: string | null
   onReplay: () => void
   onSwap: () => void
   onDownload: () => void
@@ -66,30 +67,34 @@ function displayStars(result: RecapResult): string {
 function SlideShell({
   testId,
   label,
+  qualifier,
   children,
 }: {
   testId: string
   label: string
+  qualifier?: string | null
   children: ReactNode
 }) {
   return (
     <section
-      className="flex h-full min-h-0 flex-col justify-center gap-6 overflow-hidden px-5 pb-5 pt-[var(--story-chrome,5.75rem)] lg:px-8"
+      className="flex h-full min-h-0 flex-col justify-center gap-5 overflow-hidden px-5 pb-5 pt-[var(--story-chrome,5.75rem)] lg:px-8"
       aria-label={label}
       data-testid={testId}
     >
+      {qualifier ? (
+        <p
+          data-testid="compare-qualifier"
+          className="shrink-0 text-center text-xs text-[#8F84A0] lg:hidden"
+        >
+          {qualifier}
+        </p>
+      ) : null}
       {children}
     </section>
   )
 }
 
-function LanguageBars({
-  result,
-  accent,
-}: {
-  result: RecapResult
-  accent: string
-}) {
+function LanguageBars({ result }: { result: RecapResult }) {
   const languages = result.stats.topLanguages.slice(0, 3)
   if (languages.length === 0) {
     return (
@@ -101,16 +106,13 @@ function LanguageBars({
   return (
     <div className="flex w-full flex-col gap-2">
       <div className="flex h-3.5 gap-[3px] overflow-hidden rounded-full">
-        {languages.map((lang, index) => (
+        {languages.map((lang) => (
           <div
             key={lang.name}
             className="h-full rounded-full"
             style={{
               width: `${lang.percentage}%`,
-              background:
-                index === 0
-                  ? accent
-                  : LANGUAGE_BAR_COLORS[index % LANGUAGE_BAR_COLORS.length],
+              background: languageBarColor(lang.name),
             }}
           />
         ))}
@@ -137,11 +139,13 @@ export function CompareIntroSlide({
   b,
   avatarA,
   avatarB,
+  qualifier,
 }: CompareSlideProps) {
   return (
     <SlideShell
       testId="compare-intro"
       label={`Compare @${a.stats.username} versus @${b.stats.username}`}
+      qualifier={qualifier}
     >
       <div className="flex w-full flex-col items-center gap-6 min-[600px]:grid min-[600px]:grid-cols-[1fr_72px_1fr] min-[600px]:items-center">
         <div className="flex flex-col items-center gap-3 min-[600px]:items-start">
@@ -208,16 +212,16 @@ function StatDuel({
   return (
     <div className="flex w-full flex-col items-center gap-6">
       <div className="flex w-full flex-col gap-5 min-[600px]:grid min-[600px]:grid-cols-[1fr_72px_1fr] min-[600px]:items-center min-[600px]:gap-3">
-        <div
-          className="flex min-w-0 flex-col items-center gap-2 min-[600px]:items-start"
-          style={{ opacity: aOpacity }}
-        >
-          <SideStatus side="a" winner={winner} comparable={comparable} />
+        <div className="flex min-w-0 flex-col items-center gap-2 min-[600px]:items-start">
           <div className="flex items-center gap-2.5">
             <PlayerAvatar src={avatarA} side="a" />
-            <p className="truncate text-sm" style={{ color: COMPARE_COLOR_A }}>
-              @{a.stats.username}
-            </p>
+            <HandleWithChip
+              username={a.stats.username}
+              side="a"
+              winner={winner}
+              comparable={comparable}
+              align="start"
+            />
           </div>
           <FittedText
             text={aDisplay}
@@ -225,7 +229,7 @@ function StatDuel({
             minSize={48}
             testId={`${testId}-hero-a`}
             className="font-bold tracking-[-0.04em] min-[600px]:text-left"
-            style={{ color: COMPARE_COLOR_A }}
+            style={{ color: COMPARE_COLOR_A, opacity: aOpacity }}
           />
         </div>
 
@@ -234,15 +238,15 @@ function StatDuel({
         </div>
         <VsDivider />
 
-        <div
-          className="flex min-w-0 flex-col items-center gap-2 min-[600px]:items-end"
-          style={{ opacity: bOpacity }}
-        >
-          <SideStatus side="b" winner={winner} comparable={comparable} />
+        <div className="flex min-w-0 flex-col items-center gap-2 min-[600px]:items-end">
           <div className="flex flex-row-reverse items-center gap-2.5 min-[600px]:flex-row">
-            <p className="truncate text-sm" style={{ color: COMPARE_COLOR_B }}>
-              @{b.stats.username}
-            </p>
+            <HandleWithChip
+              username={b.stats.username}
+              side="b"
+              winner={winner}
+              comparable={comparable}
+              align="end"
+            />
             <PlayerAvatar src={avatarB} side="b" />
           </div>
           <FittedText
@@ -251,7 +255,7 @@ function StatDuel({
             minSize={48}
             testId={`${testId}-hero-b`}
             className="font-bold tracking-[-0.04em] min-[600px]:text-right"
-            style={{ color: COMPARE_COLOR_B }}
+            style={{ color: COMPARE_COLOR_B, opacity: bOpacity }}
           />
         </div>
       </div>
@@ -278,6 +282,7 @@ function StatCompareSlide({
   verdict,
   testId,
   label,
+  qualifier,
 }: {
   a: RecapResult
   b: RecapResult
@@ -291,6 +296,7 @@ function StatCompareSlide({
   verdict: VerdictPart[]
   testId: string
   label: string
+  qualifier?: string | null
 }) {
   const aPrivate = isMetricPrivate(a.stats, roundId)
   const bPrivate = isMetricPrivate(b.stats, roundId)
@@ -298,7 +304,7 @@ function StatCompareSlide({
   const winner = comparable ? compareMetric(aValue, bValue) : 'tie'
 
   return (
-    <SlideShell testId={testId} label={label}>
+    <SlideShell testId={testId} label={label} qualifier={qualifier}>
       <StatDuel
         a={a}
         b={b}
@@ -332,6 +338,7 @@ export function CompareContributionsSlide(props: CompareSlideProps) {
       verdict={contributionsVerdict(props.a.stats, props.b.stats)}
       testId="compare-contributions"
       label={`Contributions: @${props.a.stats.username} versus @${props.b.stats.username}`}
+      qualifier={props.qualifier}
     />
   )
 }
@@ -351,6 +358,7 @@ export function CompareStreakSlide(props: CompareSlideProps) {
       verdict={streakVerdict(props.a.stats, props.b.stats)}
       testId="compare-streak"
       label={`Streak: @${props.a.stats.username} versus @${props.b.stats.username}`}
+      qualifier={props.qualifier}
     />
   )
 }
@@ -370,6 +378,7 @@ export function CompareStarsSlide(props: CompareSlideProps) {
       verdict={starsVerdict(props.a.stats, props.b.stats)}
       testId="compare-stars"
       label={`Stars: @${props.a.stats.username} versus @${props.b.stats.username}`}
+      qualifier={props.qualifier}
     />
   )
 }
@@ -379,10 +388,15 @@ export function CompareLanguagesSlide({
   b,
   avatarA,
   avatarB,
+  qualifier,
 }: CompareSlideProps) {
   const verdict = languagesVerdict(a.stats, b.stats)
   return (
-    <SlideShell testId="compare-languages" label="Top languages comparison">
+    <SlideShell
+      testId="compare-languages"
+      label="Top languages comparison"
+      qualifier={qualifier}
+    >
       <div className="flex w-full flex-col items-center gap-6">
         <div className="flex w-full flex-col gap-5 min-[600px]:grid min-[600px]:grid-cols-[1fr_72px_1fr] min-[600px]:items-center">
           <div className="flex min-w-0 flex-col items-center gap-3 min-[600px]:items-start">
@@ -392,7 +406,7 @@ export function CompareLanguagesSlide({
                 @{a.stats.username}
               </p>
             </div>
-            <LanguageBars result={a} accent={COMPARE_COLOR_A} />
+            <LanguageBars result={a} />
           </div>
           <div className="hidden min-[600px]:flex min-[600px]:justify-center">
             <VsBadge />
@@ -405,7 +419,7 @@ export function CompareLanguagesSlide({
               </p>
               <PlayerAvatar src={avatarB} side="b" />
             </div>
-            <LanguageBars result={b} accent={COMPARE_COLOR_B} />
+            <LanguageBars result={b} />
           </div>
         </div>
         <p data-testid="compare-hero" className="text-center text-[22px] text-[#F4EDE2]">
@@ -485,10 +499,15 @@ export function CompareBusiestSlide({
   b,
   avatarA,
   avatarB,
+  qualifier,
 }: CompareSlideProps) {
   const line = busiestContrastLine(a.stats, b.stats)
   return (
-    <SlideShell testId="compare-busiest" label="Peak time comparison">
+    <SlideShell
+      testId="compare-busiest"
+      label="Peak time comparison"
+      qualifier={qualifier}
+    >
       <div className="flex w-full flex-col items-center gap-6">
         <div className="flex w-full flex-col gap-5 min-[600px]:grid min-[600px]:grid-cols-[1fr_72px_1fr] min-[600px]:items-center">
           <PeakSide result={a} avatar={avatarA} side="a" />
@@ -506,11 +525,16 @@ export function CompareBusiestSlide({
   )
 }
 
-export function ComparePersonalitiesSlide({ a, b }: CompareSlideProps) {
+export function ComparePersonalitiesSlide({
+  a,
+  b,
+  qualifier,
+}: CompareSlideProps) {
   return (
     <SlideShell
       testId="compare-personalities"
       label="Personalities side by side"
+      qualifier={qualifier}
     >
       <div className="mx-auto flex w-full max-w-[640px] flex-col items-center gap-5">
         <div className="flex w-full flex-col items-center gap-3 text-center">
@@ -570,17 +594,19 @@ export function CompareScoreSlide({
 
   return (
     <section
-      className="relative flex h-full min-h-0 flex-col overflow-hidden px-5 pb-4 pt-[var(--story-chrome,5.75rem)] lg:px-8"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden px-5 pb-4 pt-[calc(var(--story-chrome,5.75rem)+16px)] lg:px-8"
       data-testid="compare-score"
       aria-label={score.headline}
     >
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex shrink-0 items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <PlayerAvatar src={avatarA} side="a" size={64} />
+            <PlayerAvatar src={avatarA} side="a" size={56} />
             <div className="min-w-0">
-              <p className="truncate font-semibold">{a.stats.displayName}</p>
-              <p className="truncate text-sm" style={{ color: COMPARE_COLOR_A }}>
+              <p className="truncate text-sm font-semibold lg:text-base">
+                {a.stats.displayName}
+              </p>
+              <p className="truncate text-xs lg:text-sm" style={{ color: COMPARE_COLOR_A }}>
                 @{a.stats.username}
               </p>
             </div>
@@ -589,14 +615,13 @@ export function CompareScoreSlide({
           {score.enoughData ? (
             <p
               data-testid="compare-score-digits"
-              className="shrink-0 font-bold tracking-[-0.05em]"
-              style={{ fontSize: 'clamp(2.5rem, 12vw, 6.5rem)', lineHeight: 1 }}
+              className="shrink-0 font-bold tracking-[-0.05em] text-[56px] leading-none lg:text-[72px]"
             >
-              <span style={{ color: COMPARE_COLOR_A, opacity: aDim ? 0.55 : 1 }}>
+              <span style={{ color: COMPARE_COLOR_A, opacity: aDim ? 0.72 : 1 }}>
                 {score.aWins}
               </span>
-              <span className="mx-2 text-[#8F84A0]">–</span>
-              <span style={{ color: COMPARE_COLOR_B, opacity: bDim ? 0.55 : 1 }}>
+              <span className="mx-1.5 text-[#8F84A0] lg:mx-2">–</span>
+              <span style={{ color: COMPARE_COLOR_B, opacity: bDim ? 0.72 : 1 }}>
                 {score.bWins}
               </span>
             </p>
@@ -605,10 +630,12 @@ export function CompareScoreSlide({
           )}
 
           <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-2.5">
-            <PlayerAvatar src={avatarB} side="b" size={64} />
+            <PlayerAvatar src={avatarB} side="b" size={56} />
             <div className="min-w-0 text-right">
-              <p className="truncate font-semibold">{b.stats.displayName}</p>
-              <p className="truncate text-sm" style={{ color: COMPARE_COLOR_B }}>
+              <p className="truncate text-sm font-semibold lg:text-base">
+                {b.stats.displayName}
+              </p>
+              <p className="truncate text-xs lg:text-sm" style={{ color: COMPARE_COLOR_B }}>
                 @{b.stats.username}
               </p>
             </div>
@@ -617,63 +644,70 @@ export function CompareScoreSlide({
 
         <p
           data-testid="compare-hero"
-          className="mt-4 shrink-0 text-center text-[22px] leading-snug text-[#F4EDE2]"
+          className="mt-3 shrink-0 text-center text-[18px] leading-snug text-[#F4EDE2] lg:text-[22px] [@media(max-height:740px)]:hidden [@container(max-height:520px)]:hidden"
         >
           {score.headline}
         </p>
 
-        <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <ul className="space-y-1">
-            {score.rounds.map((round) => {
-              const muted = !round.comparable
-              const aWin = round.comparable && round.winner === 'a'
-              const bWin = round.comparable && round.winner === 'b'
-              return (
-                <li
-                  key={round.id}
-                  className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-white/8 py-2 text-sm"
+        <ul className="mt-3 shrink-0">
+          {score.rounds.map((round) => {
+            const muted = !round.comparable
+            const aWin = round.comparable && round.winner === 'a'
+            const bWin = round.comparable && round.winner === 'b'
+            return (
+              <li
+                key={round.id}
+                className="grid h-11 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-white/8 text-sm"
+              >
+                <span
+                  className="min-w-0 truncate"
+                  style={{
+                    color: muted
+                      ? '#8F84A0'
+                      : aWin
+                        ? COMPARE_COLOR_A
+                        : round.winner === 'b'
+                          ? 'rgba(242,196,109,0.72)'
+                          : '#F4EDE2',
+                    fontWeight: aWin ? 700 : 400,
+                    opacity: muted || aWin || round.winner === 'tie' ? 1 : 0.72,
+                  }}
                 >
-                  <span
-                    className="truncate"
-                    style={{
-                      color: muted
-                        ? '#8F84A0'
-                        : aWin
-                          ? COMPARE_COLOR_A
-                          : round.winner === 'b'
-                            ? 'rgba(244,237,226,0.55)'
-                            : '#F4EDE2',
-                      fontWeight: aWin ? 700 : 400,
-                    }}
-                  >
-                    {round.aDisplay}
-                  </span>
+                  {round.aDisplay}
+                </span>
+                <span className="flex min-w-0 flex-col items-center px-1 text-center">
                   <span className="font-mono text-[11px] tracking-[0.12em] text-[#8F84A0] uppercase">
-                    {muted ? 'Not comparable' : round.label}
+                    {round.label}
                   </span>
-                  <span
-                    className="truncate text-right"
-                    style={{
-                      color: muted
-                        ? '#8F84A0'
-                        : bWin
-                          ? COMPARE_COLOR_B
-                          : round.winner === 'a'
-                            ? 'rgba(244,237,226,0.55)'
-                            : '#F4EDE2',
-                      fontWeight: bWin ? 700 : 400,
-                    }}
-                  >
-                    {round.bDisplay}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
+                  {muted ? (
+                    <span className="font-mono text-[10px] tracking-[0.08em] text-[#8F84A0]">
+                      · not comparable
+                    </span>
+                  ) : null}
+                </span>
+                <span
+                  className="min-w-0 truncate text-right"
+                  style={{
+                    color: muted
+                      ? '#8F84A0'
+                      : bWin
+                        ? COMPARE_COLOR_B
+                        : round.winner === 'a'
+                          ? 'rgba(111,211,184,0.72)'
+                          : '#F4EDE2',
+                    fontWeight: bWin ? 700 : 400,
+                    opacity: muted || bWin || round.winner === 'tie' ? 1 : 0.72,
+                  }}
+                >
+                  {round.bDisplay}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
       </div>
 
-      <div className="mt-3 flex shrink-0 flex-col gap-2.5">
+      <div className="mt-3 flex shrink-0 flex-col gap-2">
         <button
           type="button"
           data-testid="compare-download"

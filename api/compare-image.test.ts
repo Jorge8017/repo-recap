@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { buildCompareCardElement, COMPARE_IMAGE_CONTENT_WIDTH } from './_lib/compareCardElement.js'
+import {
+  buildCompareCardElement,
+  COMPARE_IMAGE_CONTENT_WIDTH,
+  COMPARE_IMAGE_MAX_RIGHT,
+  COMPARE_IMAGE_PADDING,
+} from './_lib/compareCardElement.js'
 import type { CachedRecapPayload } from '../src/types.js'
 
 const { fakePngBuffer, renderSharePng } = vi.hoisted(() => {
@@ -230,12 +235,16 @@ describe('compare-image handler', () => {
     expect(state.headers['content-type']).toBe('image/png')
 
     const element = buildCompareCardElement(publicUser, ghostUser, null, null)
-    const nodes = collectStyledText(element)
+    const nodes = collectLayoutText(element, {
+      x: COMPARE_IMAGE_PADDING,
+      width: COMPARE_IMAGE_CONTENT_WIDTH,
+      fontSize: 32,
+    })
     expect(nodes.map((node) => node.text)).toMatchSnapshot()
     for (const node of nodes) {
-      const estimated = estimateTextWidth(node.text, node.fontSize)
-      const limit = node.maxWidth ?? COMPARE_IMAGE_CONTENT_WIDTH
-      expect(estimated).toBeLessThanOrEqual(limit + 1)
+      const width = estimateTextWidth(node.text, node.fontSize)
+      const right = node.x + Math.min(width, node.maxWidth ?? width)
+      expect(right).toBeLessThanOrEqual(COMPARE_IMAGE_MAX_RIGHT + 0.5)
     }
   })
 })
@@ -244,31 +253,57 @@ function estimateTextWidth(text: string, fontSize: number): number {
   return text.length * fontSize * 0.62
 }
 
-function collectStyledText(
+function collectLayoutText(
   node: unknown,
-  inherited: { fontSize: number; maxWidth?: number } = { fontSize: 36 },
-): Array<{ text: string; fontSize: number; maxWidth?: number }> {
+  inherited: { x: number; width: number; fontSize: number; maxWidth?: number },
+): Array<{ text: string; fontSize: number; x: number; maxWidth?: number }> {
   if (node == null || typeof node === 'boolean') return []
   if (typeof node === 'string' || typeof node === 'number') {
     const text = String(node)
     if (!text.trim()) return []
-    return [{ text, fontSize: inherited.fontSize, maxWidth: inherited.maxWidth }]
+    return [
+      {
+        text,
+        fontSize: inherited.fontSize,
+        x: inherited.x,
+        maxWidth: inherited.maxWidth ?? inherited.width,
+      },
+    ]
   }
   if (Array.isArray(node)) {
-    return node.flatMap((child) => collectStyledText(child, inherited))
+    return node.flatMap((child) => collectLayoutText(child, inherited))
   }
   if (typeof node === 'object' && 'props' in node) {
-    const props = (node as { props: { style?: Record<string, unknown>; children?: unknown } }).props
+    const props = (
+      node as {
+        props: {
+          style?: Record<string, unknown>
+          children?: unknown
+        }
+      }
+    ).props
     const style = props.style ?? {}
     const fontSize =
       typeof style.fontSize === 'number' ? style.fontSize : inherited.fontSize
-    const maxWidth =
+    const width =
       typeof style.maxWidth === 'number'
         ? style.maxWidth
         : typeof style.width === 'number'
           ? style.width
-          : inherited.maxWidth
-    return collectStyledText(props.children, { fontSize, maxWidth })
+          : inherited.width
+    const justify = style.justifyContent
+    let x = inherited.x
+    if (justify === 'flex-end' || justify === 'right') {
+      x = inherited.x + inherited.width - width
+    } else if (justify === 'center') {
+      x = inherited.x + (inherited.width - width) / 2
+    }
+    return collectLayoutText(props.children, {
+      x,
+      width,
+      fontSize,
+      maxWidth: width,
+    })
   }
   return []
 }

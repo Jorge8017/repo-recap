@@ -151,28 +151,51 @@ export function ProportionBar({
   )
 }
 
-export function SideStatus({
-  side,
-  winner,
-  comparable,
-}: {
-  side: 'a' | 'b'
-  winner: CompareSide
-  comparable: boolean
-}) {
-  if (!comparable) return <span className="inline-flex h-[22px]" aria-hidden="true" />
-  if (winner === 'tie') return <LeadsChip side={side} label="TIED" />
-  if (winner === side) return <LeadsChip side={side} label="LEADS" />
-  return <span className="inline-flex h-[22px]" aria-hidden="true" />
-}
-
 export function sideOpacity(
   side: 'a' | 'b',
   winner: CompareSide,
   comparable: boolean,
 ): number {
   if (!comparable || winner === 'tie' || winner === side) return 1
-  return 0.55
+  return 0.72
+}
+
+export function HandleWithChip({
+  username,
+  side,
+  winner,
+  comparable,
+  align = 'start',
+}: {
+  username: string
+  side: 'a' | 'b'
+  winner: CompareSide
+  comparable: boolean
+  align?: 'start' | 'end'
+}) {
+  const chip =
+    comparable && winner === 'tie' ? (
+      <LeadsChip side={side} label="TIED" />
+    ) : comparable && winner === side ? (
+      <LeadsChip side={side} label="LEADS" />
+    ) : null
+
+  return (
+    <div
+      className={`flex min-w-0 flex-wrap items-center gap-2 ${
+        align === 'end' ? 'justify-end' : 'justify-start'
+      }`}
+    >
+      {align === 'end' ? chip : null}
+      <p
+        className="truncate text-sm"
+        style={{ color: playerColor(side), opacity: sideOpacity(side, winner, comparable) }}
+      >
+        @{username}
+      </p>
+      {align === 'start' ? chip : null}
+    </div>
+  )
 }
 
 export function CompareHalf({

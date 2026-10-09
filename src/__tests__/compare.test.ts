@@ -5,12 +5,15 @@ import {
   compareMetric,
   contributionsVerdict,
   formatMultiplier,
+  isNearEqual,
   isSameUser,
   languagesVerdict,
   planCompareSlides,
+  starsVerdict,
   streakVerdict,
 } from '../lib/compare'
 import { assignPersonality } from '../lib/personality'
+import { formatCount } from '../lib/stats'
 import type { RecapResult, RecapStats } from '../types'
 
 function stats(overrides: Partial<RecapStats> = {}): RecapStats {
@@ -204,6 +207,43 @@ describe('compare helpers', () => {
       stats({ displayName: 'Sindre', username: 'sindresorhus', longestStreak: 6 }),
     )
     expect(streak.map((part) => part.text).join('')).toContain('by 4 days')
+  })
+
+  it('uses leads-by when the losing value is 0', () => {
+    const parts = starsVerdict(
+      stats({ displayName: 'Dan', username: 'gaearon', totalStars: 45_499 }),
+      stats({ displayName: 'Jordan', username: 'jorge8017', totalStars: 0 }),
+    )
+    const text = parts.map((part) => part.text).join('')
+    expect(text).toBe(`dan leads by ${formatCount(45_499)} stars.`)
+    expect(text).not.toContain('Too close')
+    expect(text).not.toContain('×')
+
+    const contrib = contributionsVerdict(
+      stats({ displayName: 'Alice', totalContributions: 0 }),
+      stats({ displayName: 'Bob', username: 'bob', totalContributions: 12 }),
+    )
+    expect(contrib.map((part) => part.text).join('')).toBe(
+      `bob leads by ${formatCount(12)} contributions.`,
+    )
+  })
+
+  it('says too close only for near-equal positive values or exact ties', () => {
+    expect(isNearEqual(100, 96)).toBe(true)
+    expect(isNearEqual(100, 90)).toBe(false)
+    expect(isNearEqual(0, 100)).toBe(false)
+
+    const near = contributionsVerdict(
+      stats({ totalContributions: 100 }),
+      stats({ username: 'bob', totalContributions: 97 }),
+    )
+    expect(near[0]?.text).toBe('Too close to call.')
+
+    const tied = starsVerdict(
+      stats({ totalStars: 50 }),
+      stats({ username: 'bob', totalStars: 50 }),
+    )
+    expect(tied[0]?.text).toBe('Too close to call.')
   })
 
   it('builds language and peak-time verdicts without placeholder rhythms', () => {
