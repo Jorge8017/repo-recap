@@ -1,6 +1,7 @@
 import { formatHourLabel } from '../../lib/stats'
 import type { SlideProps } from '../../types'
-import { Headline, SlideShell } from './SlideShell'
+import { HeroStatSlide } from './HeroStatSlide'
+import { SlideShell } from './SlideShell'
 
 export function BusiestSlide({ stats }: SlideProps) {
   const day = stats.busiestDay
@@ -12,22 +13,19 @@ export function BusiestSlide({ stats }: SlideProps) {
   if (day) announcementParts.push(`busiest day ${day}`)
   if (hour) announcementParts.push(`busiest hour ${hour} in your local time`)
 
+  const details =
+    day && hour ? [{ label: 'Peak hour', value: hour }] : undefined
+
   return (
     <SlideShell
       announcement={announcementParts.join(': ')}
       gradient="bg-gradient-to-br from-[#0a1628] via-[#12325c] to-[#3d6ec9]"
-      footer={hour && day ? <span>Peak hour {hour}</span> : undefined}
+      pinBottom={false}
     >
       {day ? (
-        <>
-          <p className="mb-2 text-xl text-white/80">You light up on</p>
-          <Headline>{day}s</Headline>
-        </>
+        <HeroStatSlide lead="You light up on" value={`${day}s`} details={details} />
       ) : (
-        <>
-          <p className="mb-2 text-xl text-white/80">Peak hour</p>
-          <Headline>{hour}</Headline>
-        </>
+        <HeroStatSlide lead="Peak hour" value={hour ?? ''} />
       )}
     </SlideShell>
   )

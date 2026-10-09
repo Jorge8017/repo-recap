@@ -1,8 +1,9 @@
-import { CountUp } from '../CountUp'
+import { formatCount } from '../../lib/stats'
 import type { SlideProps } from '../../types'
-import { Headline, SlideShell } from './SlideShell'
+import { HeroStatSlide } from './HeroStatSlide'
+import { SlideShell } from './SlideShell'
 
-export function StreakSlide({ stats, reducedMotion }: SlideProps) {
+export function StreakSlide({ stats }: SlideProps) {
   const showStreak = stats.longestStreak > 0
   const showCommits = stats.totalCommitsPushed > 0
   if (!showStreak && !showCommits) return null
@@ -16,46 +17,40 @@ export function StreakSlide({ stats, reducedMotion }: SlideProps) {
     announcementParts.push(`${stats.totalCommitsPushed} commits pushed`)
   }
 
+  const details: Array<{ label: string; value: string }> = []
+  if (stats.mostActiveRepoInWindow) {
+    details.push({
+      label: 'Most active repo',
+      value: stats.mostActiveRepoInWindow.name,
+    })
+  }
+  if (showCommits && showStreak) {
+    details.push({
+      label: 'Commits pushed',
+      value: formatCount(stats.totalCommitsPushed),
+    })
+  }
+
   return (
     <SlideShell
       announcement={announcementParts.join(': ')}
       gradient="bg-gradient-to-br from-[#2a0818] via-[#6b1438] to-[#c43b5c]"
-      footer={
-        stats.mostActiveRepoInWindow ? (
-          <span>Most active: {stats.mostActiveRepoInWindow.name}</span>
-        ) : undefined
-      }
+      pinBottom={false}
     >
       {showStreak ? (
-        <>
-          <p className="mb-2 text-xl text-white/80">Longest active streak</p>
-          <Headline>
-            {stats.longestStreak} {dayLabel}
-          </Headline>
-        </>
+        <HeroStatSlide
+          lead="Longest active streak"
+          value={String(stats.longestStreak)}
+          unit={dayLabel}
+          details={details}
+        />
       ) : (
-        <>
-          <p className="mb-2 text-xl text-white/80">Commits pushed</p>
-          <Headline>
-            <CountUp
-              value={stats.totalCommitsPushed}
-              reducedMotion={reducedMotion}
-            />
-          </Headline>
-        </>
+        <HeroStatSlide
+          lead="Commits pushed"
+          value={formatCount(stats.totalCommitsPushed)}
+          details={details}
+        />
       )}
-      {showStreak && showCommits ? (
-        <div className="mt-10">
-          <p className="font-mono text-[11px] tracking-[0.16em] text-white/65 uppercase">
-            Commits pushed
-          </p>
-          <CountUp
-            value={stats.totalCommitsPushed}
-            reducedMotion={reducedMotion}
-            className="mt-1 block text-5xl font-bold text-[#ffd4de]"
-          />
-        </div>
-      ) : null}
     </SlideShell>
   )
 }
