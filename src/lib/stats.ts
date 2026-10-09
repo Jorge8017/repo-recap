@@ -11,7 +11,7 @@ import type {
   RecentRepo,
   RecapStats,
   RepoHighlight,
-} from '../types'
+} from '../types.js'
 
 export const WEEKDAYS = [
   'Sunday',

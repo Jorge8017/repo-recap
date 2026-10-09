@@ -94,7 +94,11 @@ export function Landing() {
             </span>
           </p>
 
-          <form onSubmit={onSubmit} className="flex flex-col gap-2.5 lg:max-w-[560px]">
+          <form
+            id="generate"
+            onSubmit={onSubmit}
+            className="flex flex-col gap-2.5 lg:max-w-[560px]"
+          >
             <label htmlFor="username" className="text-sm text-[#C9BFD6] lg:sr-only">
               GitHub username
             </label>
@@ -175,6 +179,28 @@ export function Landing() {
           </div>
         ))}
       </section>
+
+      <footer
+        id="readme"
+        className="mx-auto w-full max-w-[1280px] border-t border-[rgba(244,237,226,0.1)] px-5 py-10 sm:px-10"
+      >
+        <p className="font-mono text-[11px] tracking-[0.16em] text-[#F2C46D] uppercase">
+          Embed
+        </p>
+        <h2 className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">
+          Add to your README
+        </h2>
+        <p className="mt-2 max-w-[520px] text-[15px] leading-relaxed text-[#C9BFD6]">
+          Generate a recap, open the final card slide, and copy a Markdown snippet
+          that embeds a live SVG card on your GitHub profile README.
+        </p>
+        <a
+          href="#generate"
+          className="mt-4 inline-flex text-[15px] font-semibold text-[#F2C46D] no-underline hover:text-[#FFE2A6]"
+        >
+          Add to your README →
+        </a>
+      </footer>
     </div>
   )
 }

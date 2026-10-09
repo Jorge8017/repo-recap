@@ -1,4 +1,4 @@
-import type { SlideId } from '../types'
+import type { SlideId } from '../types.js'
 
 export const SLIDE_CATALOG: Record<SlideId, string> = {
   intro: 'Repo Recap',

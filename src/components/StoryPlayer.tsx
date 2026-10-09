@@ -152,6 +152,7 @@ export function StoryPlayer({
         event.preventDefault()
         setPaused((value) => !value)
       } else if (event.key === 'Escape') {
+        if (document.querySelector('[data-testid="readme-dialog"]')) return
         event.preventDefault()
         close()
       }

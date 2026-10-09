@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   buildAuthenticatedRecap,
   responseContainsSecret,
-} from './githubRecap.js'
+} from './_lib/github.js'
 
 const TOKEN = 'ghp_test_token_should_never_leak'
 

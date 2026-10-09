@@ -1,4 +1,4 @@
-import { isValidGitHubUsername, normalizeUsername } from '../src/lib/username.js'
+import { isValidGitHubUsername, normalizeUsername } from '../../src/lib/username.js'
 import type {
   ApiRecapErrorBody,
   CachedRecapPayload,
@@ -6,7 +6,7 @@ import type {
   GitHubEvent,
   GitHubRepo,
   GitHubUser,
-} from '../src/types.js'
+} from '../../src/types.js'
 
 const GRAPHQL_URL = 'https://api.github.com/graphql'
 const REST_ROOT = 'https://api.github.com'

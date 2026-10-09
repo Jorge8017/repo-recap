@@ -237,6 +237,64 @@ test('plays a mocked recap through to the downloadable share card', async ({
   await expect(page.getByText('Link copied')).toBeVisible()
 })
 
+const CARD_SVG = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="495" height="200" viewBox="0 0 495 200">
+  <rect width="495" height="200" fill="#1B0A2B"/>
+  <text x="24" y="40" fill="#F2C46D" font-size="16">Repo Recap Card</text>
+</svg>`
+
+test('readme dialog toggles theme, copies snippet, and closes on Escape', async ({
+  page,
+  context,
+}) => {
+  await mockRecapApi(page, fixture)
+  await page.route('**/api/card?**', async (route) => {
+    const url = new URL(route.request().url())
+    const theme = url.searchParams.get('theme') ?? 'dark'
+    const fill = theme === 'light' ? '#FFFFFF' : '#1B0A2B'
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/svg+xml; charset=utf-8',
+      body: CARD_SVG.replace('#1B0A2B', fill),
+    })
+  })
+
+  await page.goto('/u/octocat')
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await expect(
+    page.getByRole('heading', { name: /your recap is ready/i }),
+  ).toBeVisible({ timeout: 15_000 })
+
+  for (let step = 0; step < 16; step += 1) {
+    if (await page.getByTestId('readme-open').isVisible()) break
+    await page.keyboard.press('ArrowRight')
+    await page.waitForTimeout(400)
+  }
+
+  const openBtn = page.getByTestId('readme-open')
+  await expect(openBtn).toBeVisible()
+  await openBtn.click()
+
+  const dialog = page.getByTestId('readme-dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: /add to your github readme/i })).toBeVisible()
+
+  const preview = page.getByTestId('readme-card-preview')
+  await expect(preview).toHaveAttribute('src', /theme=dark/)
+  await page.getByTestId('readme-theme-light').click()
+  await expect(preview).toHaveAttribute('src', /theme=light/)
+
+  await page.getByTestId('readme-copy').click()
+  await expect(page.getByTestId('readme-copy')).toHaveText(/copied/i)
+  const markdown = await page.getByTestId('readme-markdown').inputValue()
+  expect(markdown).toContain('/api/card?u=octocat&theme=light')
+  expect(markdown).toContain('/u/octocat')
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(openBtn).toBeFocused()
+})
+
 test.describe('long hero values', () => {
   test.use({
     viewport: { width: 390, height: 844 },

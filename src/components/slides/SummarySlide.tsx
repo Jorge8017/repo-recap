@@ -34,6 +34,7 @@ import {
   SHARE_CARD_WIDTH,
   ShareCard,
 } from '../ShareCard'
+import { ReadmeCardDialog } from '../ReadmeCardDialog'
 import { UiButton } from '../UiButton'
 
 export function SummarySlide({
@@ -45,12 +46,14 @@ export function SummarySlide({
 }: SlideProps & { onReplay: () => void; slideCount?: number }) {
   const navigate = useNavigate()
   const exportRef = useRef<HTMLDivElement>(null)
+  const readmeTriggerRef = useRef<HTMLButtonElement>(null)
   const { ref: previewHostRef, scale } = useFitScale(
     SHARE_CARD_WIDTH,
     SHARE_CARD_HEIGHT,
   )
   const [downloading, setDownloading] = useState(false)
   const [sharing, setSharing] = useState(false)
+  const [readmeOpen, setReadmeOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const origin = siteOrigin()
 
@@ -269,6 +272,15 @@ export function SummarySlide({
               </span>
             </UiButton>
           </div>
+          <button
+            ref={readmeTriggerRef}
+            type="button"
+            data-testid="readme-open"
+            onClick={() => setReadmeOpen(true)}
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-[14px] border border-[rgba(242,196,109,0.35)] bg-[rgba(242,196,109,0.08)] px-4 text-[15px] font-semibold text-[#F2C46D] hover:bg-[rgba(242,196,109,0.14)] lg:justify-start lg:text-base"
+          >
+            Add to your GitHub README
+          </button>
           <div className="flex items-center justify-center gap-7 text-[15px] text-[#C9BFD6] lg:justify-start lg:gap-6 lg:text-base">
             <button
               type="button"
@@ -299,6 +311,15 @@ export function SummarySlide({
           {toast}
         </p>
       ) : null}
+
+      <ReadmeCardDialog
+        username={stats.username}
+        open={readmeOpen}
+        onClose={() => {
+          setReadmeOpen(false)
+          window.requestAnimationFrame(() => readmeTriggerRef.current?.focus())
+        }}
+      />
     </section>
   )
 }

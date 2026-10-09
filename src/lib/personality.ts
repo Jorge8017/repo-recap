@@ -1,4 +1,4 @@
-import type { Personality, PersonalityId, RecapStats } from '../types'
+import type { Personality, PersonalityId, RecapStats } from '../types.js'
 
 interface PersonalityRule {
   id: PersonalityId
