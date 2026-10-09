@@ -56,6 +56,9 @@ export function YearSlide({ stats, reducedMotion }: SlideProps) {
       <HeroStatSlide
         lead="Your last 12 months"
         value={formatCount(total)}
+        countTo={total}
+        reducedMotion={reducedMotion}
+        visitKey="year"
         unit={unit}
         details={details}
       >

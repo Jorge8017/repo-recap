@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from 'react'
-import { useFitText } from '../../hooks/useFitText'
+import { useFitTextOnce } from '../../hooks/useFitText'
+import { CountUp } from '../CountUp'
 
 interface HeroStatSlideProps {
   lead: string
@@ -7,6 +8,10 @@ interface HeroStatSlideProps {
   unit?: string
   details?: Array<{ label: string; value: string }>
   children?: ReactNode
+  /** When set, count up to this number once per visit; `value` is the final formatted text used for sizing. */
+  countTo?: number
+  reducedMotion?: boolean
+  visitKey?: string
 }
 
 export function HeroStatSlide({
@@ -15,9 +20,16 @@ export function HeroStatSlide({
   unit,
   details,
   children,
+  countTo,
+  reducedMotion = true,
+  visitKey,
 }: HeroStatSlideProps) {
-  const valueRef = useRef<HTMLSpanElement>(null)
-  const valueSize = useFitText(valueRef, 96, 40)
+  const sizerRef = useRef<HTMLSpanElement>(null)
+  const {
+    size: valueSize,
+    ready: fitReady,
+    reservedWidth,
+  } = useFitTextOnce(sizerRef, value, 96, 40)
   const unitSize = Math.max(18, valueSize / 3)
   const items = details?.filter((item) => item.value.length > 0) ?? []
 
@@ -34,25 +46,49 @@ export function HeroStatSlide({
           className="mt-2 flex min-w-0 max-w-full items-start gap-3"
           style={{ minHeight: 96 }}
         >
-          <span className="min-w-0 flex-1 basis-0 overflow-hidden">
+          <span className="relative min-w-0 flex-1 basis-0 overflow-hidden">
             <span
-              ref={valueRef}
-              data-testid="hero-stat-value"
-              className="leading-none font-bold tracking-[-0.04em] text-[#F4EDE2]"
-              style={{
-                display: 'inline-block',
-                maxWidth: '100%',
-                whiteSpace: 'nowrap',
-                fontSize: valueSize,
-              }}
+              ref={sizerRef}
+              aria-hidden="true"
+              className="pointer-events-none absolute top-0 left-0 font-bold tracking-[-0.04em] whitespace-nowrap"
+              style={{ fontSize: 96, visibility: 'hidden' }}
             >
               {value}
+            </span>
+            <span
+              data-testid="hero-stat-value"
+              className="inline-block max-w-full leading-none font-bold tracking-[-0.04em] text-[#F4EDE2] tabular-nums"
+              style={{
+                fontSize: valueSize,
+                fontVariantNumeric: 'tabular-nums',
+                // Avoid flashing maxSize before the final-value measure commits.
+                visibility: fitReady ? 'visible' : 'hidden',
+                minWidth: reservedWidth > 0 ? reservedWidth : undefined,
+              }}
+            >
+              {countTo != null ? (
+                fitReady ? (
+                  <CountUp
+                    value={countTo}
+                    reducedMotion={reducedMotion}
+                    visitKey={visitKey ?? value}
+                  />
+                ) : (
+                  value
+                )
+              ) : (
+                value
+              )}
             </span>
           </span>
           {unit ? (
             <span
               className="shrink-0 self-end leading-none font-bold text-[#F4EDE2]"
-              style={{ fontSize: unitSize, marginBottom: 6 }}
+              style={{
+                fontSize: unitSize,
+                marginBottom: 6,
+                visibility: fitReady ? 'visible' : 'hidden',
+              }}
             >
               {unit}
             </span>

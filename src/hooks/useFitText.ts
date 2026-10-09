@@ -96,3 +96,79 @@ export function useFitText(
 
   return size
 }
+
+export type FitTextOnceResult = {
+  size: number
+  ready: boolean
+  /** Pixel width of the final value at the fitted size. */
+  reservedWidth: number
+}
+
+/**
+ * Fit font size from a dedicated sizer that holds the FINAL value only.
+ * Waits for document.fonts before the first committed size so the visible
+ * hero never flashes maxSize then snaps. Remeasures only on width/contentKey.
+ */
+export function useFitTextOnce(
+  ref: RefObject<HTMLElement | null>,
+  contentKey: string,
+  maxSize: number,
+  minSize: number,
+): FitTextOnceResult {
+  const [size, setSize] = useState(maxSize)
+  const [ready, setReady] = useState(false)
+  const [reservedWidth, setReservedWidth] = useState(0)
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const parent = el.parentElement
+    if (!parent) return
+
+    let cancelled = false
+    let observer: ResizeObserver | null = null
+    setReady(false)
+
+    const measure = (): boolean => {
+      if (cancelled) return false
+      const parentWidth = parent.clientWidth
+      // Parent is often 0 on the first layout pass; wait for a real width.
+      if (parentWidth < 8) return false
+
+      el.style.fontSize = `${maxSize}px`
+      const next = Math.round(
+        fitTextSize(maxSize, minSize, parentWidth, el.scrollWidth),
+      )
+      el.style.fontSize = `${next}px`
+      setSize(next)
+      setReservedWidth(Math.ceil(el.scrollWidth))
+      setReady(true)
+      observer?.disconnect()
+      observer = null
+      return true
+    }
+
+    const start = () => {
+      if (measure()) return
+      observer = new ResizeObserver(() => {
+        measure()
+      })
+      observer.observe(parent)
+    }
+
+    if (!document.fonts || document.fonts.status === 'loaded') {
+      start()
+    } else {
+      void document.fonts.ready.then(() => {
+        if (!cancelled) start()
+      })
+    }
+
+    return () => {
+      cancelled = true
+      observer?.disconnect()
+    }
+  }, [contentKey, maxSize, minSize, ref])
+
+  return { size, ready, reservedWidth }
+}

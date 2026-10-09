@@ -69,13 +69,25 @@ input:focus-visible {
 }
 
 .monthly-bars-slot {
-  flex: 1 1 auto;
-  min-height: 64px;
-  max-height: 140px;
+  /* Fixed footprint from first paint so vertically-centred heroes never shift. */
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  height: 128px;
+  min-height: 128px;
+  max-height: 128px;
   margin-top: 32px;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .monthly-bars-slot {
+    height: 148px;
+    min-height: 148px;
+    max-height: 148px;
+  }
 }
 
 @container story-card (max-height: 560px) {

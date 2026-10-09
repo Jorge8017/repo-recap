@@ -299,19 +299,13 @@ export function StoryPlayer({
                     data-testid={`slide-${currentId}`}
                     data-slide-id={currentId}
                     className="absolute inset-0"
-                    initial={
-                      reducedMotion ? { opacity: 1 } : { opacity: 0, y: 28 }
-                    }
-                    animate={
-                      reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }
-                    }
-                    exit={
-                      reducedMotion ? { opacity: 0 } : { opacity: 0, y: -18 }
-                    }
+                    initial={reducedMotion ? { opacity: 1 } : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0 }}
                     transition={
                       reducedMotion
                         ? { duration: 0 }
-                        : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+                        : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }
                     }
                   >
                     <SlideMountProbe id={currentId} />
