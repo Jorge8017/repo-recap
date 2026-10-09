@@ -50,23 +50,39 @@ input:focus-visible {
   color: #f4ede2;
 }
 
-@keyframes heatmap-reveal {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
+.monthly-bars {
+  --monthly-bars-gap: 6px;
+}
+
+@media (max-width: 419px) {
+  .monthly-bars {
+    --monthly-bars-gap: 4px;
   }
 }
 
-.heatmap-reveal {
-  clip-path: inset(0 100% 0 0);
-  animation: heatmap-reveal 900ms ease-out forwards;
+.monthly-bar {
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  will-change: transform;
+}
+
+.monthly-bars--active .monthly-bar {
+  animation: monthly-bar-grow 600ms ease-out forwards;
+  animation-delay: calc(var(--bar-index, 0) * 30ms);
+}
+
+@keyframes monthly-bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .heatmap-reveal {
-    clip-path: inset(0 0 0 0);
-    animation: none;
+  .monthly-bar {
+    transform: scaleY(1);
+    animation: none !important;
   }
 }

@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
+import { buildMonthlyBars } from '../../lib/monthlyBars'
 import { formatCount } from '../../lib/stats'
 import type { SlideProps } from '../../types'
-import { ContributionHeatmap } from '../ContributionHeatmap'
+import { MonthlyBars } from '../MonthlyBars'
 import { HeroStatSlide } from './HeroStatSlide'
 import { SlideShell } from './SlideShell'
 
@@ -40,6 +42,11 @@ export function YearSlide({ stats, reducedMotion }: SlideProps) {
     )
   }
 
+  const months = useMemo(
+    () => buildMonthlyBars(stats.contributionWeeks),
+    [stats.contributionWeeks],
+  )
+
   return (
     <SlideShell
       announcement={summaryParts.join('. ')}
@@ -52,8 +59,10 @@ export function YearSlide({ stats, reducedMotion }: SlideProps) {
         unit={unit}
         details={details}
       >
-        <ContributionHeatmap
-          weeks={stats.contributionWeeks}
+        <MonthlyBars
+          months={months}
+          totalContributions={total}
+          bestMonthLabel={stats.bestMonth?.label ?? null}
           reducedMotion={reducedMotion}
         />
       </HeroStatSlide>

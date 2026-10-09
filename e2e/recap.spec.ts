@@ -282,7 +282,7 @@ test.describe('long hero values', () => {
   })
 })
 
-async function assertHeatmapInsideCard(page: Page) {
+async function assertMonthlyBarsInsideCard(page: Page) {
   await mockRecapApi(page, fixture)
   await page.goto('/u/octocat')
   await expect(
@@ -291,23 +291,23 @@ async function assertHeatmapInsideCard(page: Page) {
   await page.evaluate(() => document.fonts.ready)
 
   await goToSlideWithText(page, 'Your last 12 months')
-  const heatmap = page.getByTestId('contribution-heatmap')
-  await expect(heatmap).toBeVisible()
-  await expect(heatmap.locator('svg')).toBeVisible()
+  const chart = page.getByTestId('monthly-bars')
+  await expect(chart).toBeVisible()
+  await expect(chart.locator('.monthly-bar')).toHaveCount(12)
   await expect
     .poll(async () => {
-      const box = await heatmap.boundingBox()
+      const box = await chart.boundingBox()
       return box && box.width > 40 && box.height > 20
     })
     .toBeTruthy()
 
   expectBoxInside(
-    await heatmap.boundingBox(),
+    await chart.boundingBox(),
     await page.getByTestId('story-card').boundingBox(),
   )
 }
 
-test.describe('contribution heatmap', () => {
+test.describe('monthly bars', () => {
   test.use({
     timezoneId: 'UTC',
     reducedMotion: 'reduce',
@@ -315,11 +315,11 @@ test.describe('contribution heatmap', () => {
 
   test('fits inside the card at 1440px', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await assertHeatmapInsideCard(page)
+    await assertMonthlyBarsInsideCard(page)
   })
 
   test('fits inside the card at 390px', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
-    await assertHeatmapInsideCard(page)
+    await assertMonthlyBarsInsideCard(page)
   })
 })
