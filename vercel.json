@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/share-image.ts": {
+      "includeFiles": "api/_fonts/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/u/:username",

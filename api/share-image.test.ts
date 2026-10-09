@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type { CachedRecapPayload } from '../src/types.js'
 import {
   buildShareCardModel,
@@ -6,43 +7,18 @@ import {
 } from './_lib/shareCardElement.js'
 import { truncateEllipsis } from './_lib/xml.js'
 
-const { TINY_PNG_DATA_URI, fakePngBytes, ImageResponseMock } = vi.hoisted(() => {
-  const header = Uint8Array.from(
-    atob(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-    ),
-    (ch) => ch.charCodeAt(0),
+const { TINY_PNG_DATA_URI, fakePngBuffer, renderSharePng } = vi.hoisted(() => {
+  const header = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
   )
-  const fakePngBytes = new Uint8Array(8_192)
-  fakePngBytes.set(header)
-
-  class ImageResponseMock extends Response {
-    element: unknown
-    options: { headers?: Record<string, string> } | undefined
-
-    constructor(element: unknown, options?: { headers?: Record<string, string> }) {
-      const headers = new Headers({ 'Content-Type': 'image/png' })
-      if (options?.headers) {
-        for (const [key, value] of Object.entries(options.headers)) {
-          headers.set(key, value)
-        }
-      }
-      super(fakePngBytes, { status: 200, headers })
-      this.element = element
-      this.options = options
-    }
-  }
-
+  const fakePngBuffer = Buffer.concat([header, Buffer.alloc(8_000, 1)])
   return {
-    TINY_PNG_DATA_URI: `data:image/png;base64,${btoa(String.fromCharCode(...header))}`,
-    fakePngBytes,
-    ImageResponseMock,
+    TINY_PNG_DATA_URI: `data:image/png;base64,${header.toString('base64')}`,
+    fakePngBuffer,
+    renderSharePng: vi.fn(async () => fakePngBuffer),
   }
 })
-
-vi.mock('@vercel/og', () => ({
-  ImageResponse: ImageResponseMock,
-}))
 
 vi.mock('./_lib/github.js', () => ({
   buildAuthenticatedRecap: vi.fn(),
@@ -52,15 +28,8 @@ vi.mock('./_lib/avatarDataUri.js', () => ({
   fetchAvatarDataUri: vi.fn(async () => TINY_PNG_DATA_URI),
 }))
 
-vi.mock('./_lib/shareFonts.js', () => ({
-  loadShareFonts: vi.fn(async () => [
-    {
-      name: 'Space Grotesk',
-      data: new ArrayBuffer(8),
-      weight: 700 as const,
-      style: 'normal' as const,
-    },
-  ]),
+vi.mock('./_lib/renderSharePng.js', () => ({
+  renderSharePng,
 }))
 
 import { buildAuthenticatedRecap } from './_lib/github.js'
@@ -158,6 +127,39 @@ function emptyPayload(): CachedRecapPayload {
   })
 }
 
+function mockRes() {
+  const state: {
+    statusCode: number
+    headers: Record<string, string>
+    body: Buffer | string | null
+  } = { statusCode: 200, headers: {}, body: null }
+
+  const res = {
+    status(code: number) {
+      state.statusCode = code
+      return res
+    },
+    setHeader(key: string, value: string) {
+      state.headers[key.toLowerCase()] = value
+      return res
+    },
+    send(body: Buffer | string) {
+      state.body = body
+      return res
+    },
+  } as unknown as VercelResponse
+
+  return { res, state }
+}
+
+function mockReq(query: Record<string, string | string[] | undefined>): VercelRequest {
+  return {
+    method: 'GET',
+    query,
+    url: `/api/share-image?u=${String(query.u ?? '')}`,
+  } as unknown as VercelRequest
+}
+
 function collectText(node: unknown): string[] {
   if (node == null || typeof node === 'boolean') return []
   if (typeof node === 'string' || typeof node === 'number') return [String(node)]
@@ -173,6 +175,8 @@ beforeEach(() => {
   vi.mocked(buildAuthenticatedRecap).mockReset()
   vi.mocked(fetchAvatarDataUri).mockReset()
   vi.mocked(fetchAvatarDataUri).mockResolvedValue(TINY_PNG_DATA_URI)
+  renderSharePng.mockClear()
+  renderSharePng.mockResolvedValue(fakePngBuffer)
 })
 
 afterEach(() => {
@@ -213,20 +217,18 @@ describe('share-image handler', () => {
       headers: {},
     })
 
-    const response = await handler(
-      new Request('http://localhost/api/share-image?u=octocat'),
-    )
+    const { res, state } = mockRes()
+    await handler(mockReq({ u: 'octocat' }), res)
 
-    expect(response.status).toBe(200)
-    expect(response.headers.get('content-type')).toBe('image/png')
-    expect(response.headers.get('cache-control')).toContain('s-maxage=21600')
-    const png = new Uint8Array(await response.arrayBuffer())
-    expect(png[0]).toBe(0x89)
-    expect(png[1]).toBe(0x50)
-    expect(png[2]).toBe(0x4e)
-    expect(png[3]).toBe(0x47)
-    expect(Buffer.from(png).toString('utf8')).not.toContain(TOKEN)
-    expect(png.byteLength).toBe(fakePngBytes.byteLength)
+    expect(state.statusCode).toBe(200)
+    expect(state.headers['content-type']).toBe('image/png')
+    expect(state.headers['cache-control']).toContain('s-maxage=21600')
+    expect(Buffer.isBuffer(state.body)).toBe(true)
+    const png = state.body as Buffer
+    expect(png.subarray(0, 4).toString('hex')).toBe('89504e47')
+    expect(png.equals(fakePngBuffer)).toBe(true)
+    expect(png.toString('utf8')).not.toContain(TOKEN)
+    expect(renderSharePng).toHaveBeenCalledOnce()
   })
 
   it('returns 400 for invalid username with no user data', async () => {
@@ -235,15 +237,13 @@ describe('share-image handler', () => {
       body: { error: 'invalid_username' },
     })
 
-    const response = await handler(
-      new Request('http://localhost/api/share-image?u=-bad'),
-    )
-    const body = await response.text()
+    const { res, state } = mockRes()
+    await handler(mockReq({ u: '-bad' }), res)
 
-    expect(response.status).toBe(400)
-    expect(body).toBe('Bad Request')
-    expect(body).not.toContain(TOKEN)
-    expect(body).not.toContain('-bad')
+    expect(state.statusCode).toBe(400)
+    expect(String(state.body)).toBe('Bad Request')
+    expect(String(state.body)).not.toContain(TOKEN)
+    expect(String(state.body)).not.toContain('-bad')
   })
 
   it('returns 404 for unknown user with no user data', async () => {
@@ -252,15 +252,13 @@ describe('share-image handler', () => {
       body: { error: 'not_found' },
     })
 
-    const response = await handler(
-      new Request('http://localhost/api/share-image?u=missing-user'),
-    )
-    const body = await response.text()
+    const { res, state } = mockRes()
+    await handler(mockReq({ u: 'missing-user' }), res)
 
-    expect(response.status).toBe(404)
-    expect(body).toBe('Not Found')
-    expect(body).not.toContain('missing-user')
-    expect(body).not.toContain(TOKEN)
+    expect(state.statusCode).toBe(404)
+    expect(String(state.body)).toBe('Not Found')
+    expect(String(state.body)).not.toContain('missing-user')
+    expect(String(state.body)).not.toContain(TOKEN)
   })
 
   it('returns 429 when rate limited with no user data', async () => {
@@ -269,15 +267,13 @@ describe('share-image handler', () => {
       body: { error: 'rate_limited', resetAt: '2026-10-09T12:00:00.000Z' },
     })
 
-    const response = await handler(
-      new Request('http://localhost/api/share-image?u=octocat'),
-    )
-    const body = await response.text()
+    const { res, state } = mockRes()
+    await handler(mockReq({ u: 'octocat' }), res)
 
-    expect(response.status).toBe(429)
-    expect(body).toBe('Too Many Requests')
-    expect(body).not.toContain('octocat')
-    expect(body).not.toContain(TOKEN)
+    expect(state.statusCode).toBe(429)
+    expect(String(state.body)).toBe('Too Many Requests')
+    expect(String(state.body)).not.toContain('octocat')
+    expect(String(state.body)).not.toContain(TOKEN)
   })
 
   it('renders Ghost Mode variant as a PNG', async () => {
@@ -291,16 +287,14 @@ describe('share-image handler', () => {
     const model = buildShareCardModel(emptyPayload(), null)
     expect(model.ghostMode).toBe(true)
 
-    const response = await handler(
-      new Request('http://localhost/api/share-image?u=quiet-dev'),
-    )
+    const { res, state } = mockRes()
+    await handler(mockReq({ u: 'quiet-dev' }), res)
 
-    expect(response.status).toBe(200)
-    expect(response.headers.get('content-type')).toBe('image/png')
-    expect(response).toBeInstanceOf(ImageResponseMock)
-    const texts = collectText(
-      (response as InstanceType<typeof ImageResponseMock>).element,
-    )
+    expect(state.statusCode).toBe(200)
+    expect(state.headers['content-type']).toBe('image/png')
+    expect(renderSharePng).toHaveBeenCalledOnce()
+    const firstCall = renderSharePng.mock.calls.at(0) as [unknown] | undefined
+    const texts = collectText(firstCall?.[0])
     expect(texts).toContain('Ghost Mode')
     expect(texts).toContain('On GitHub')
     expect(texts).toContain('REPO RECAP')

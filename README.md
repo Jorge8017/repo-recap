@@ -22,7 +22,7 @@ Live: https://recap.jordanshears.com
 - TanStack Query
 - React Router
 - Vitest + Playwright
-- `@vercel/og` server-side share PNG (`/api/share-image`)
+- Satori + resvg server-side share PNG (`/api/share-image`)
 - Vercel serverless `/api/recap` (authenticated GitHub GraphQL + REST)
 
 ## How stats are derived

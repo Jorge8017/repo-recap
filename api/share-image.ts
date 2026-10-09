@@ -1,50 +1,75 @@
-import { ImageResponse } from '@vercel/og'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { fetchAvatarDataUri } from './_lib/avatarDataUri.js'
 import { buildAuthenticatedRecap } from './_lib/github.js'
-import {
-  buildShareCardElement,
-  SHARE_IMAGE_HEIGHT,
-  SHARE_IMAGE_WIDTH,
-} from './_lib/shareCardElement.js'
-import { loadShareFonts } from './_lib/shareFonts.js'
-
-export const config = { runtime: 'edge' }
+import { renderSharePng } from './_lib/renderSharePng.js'
+import { buildShareCardElement } from './_lib/shareCardElement.js'
 
 const CACHE_OK = 'public, s-maxage=21600, stale-while-revalidate=86400'
 
-function errorResponse(status: 400 | 404 | 429 | 405 | 500): Response {
-  const body =
-    status === 400
-      ? 'Bad Request'
-      : status === 404
-        ? 'Not Found'
-        : status === 429
-          ? 'Too Many Requests'
-          : status === 405
-            ? 'Method Not Allowed'
-            : 'Internal Server Error'
-  return new Response(body, {
-    status,
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-store',
-    },
-  })
+function readQuery(req: VercelRequest, key: string): string | undefined {
+  const raw = req.query[key]
+  if (typeof raw === 'string') return raw
+  if (Array.isArray(raw) && typeof raw[0] === 'string') return raw[0]
+  const path = req.url
+  if (!path) return undefined
+  try {
+    return new URL(path, 'http://localhost').searchParams.get(key) ?? undefined
+  } catch {
+    return undefined
+  }
 }
 
-export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== 'GET') {
-    return errorResponse(405)
+function sendError(res: VercelResponse, status: 400 | 404 | 429 | 405 | 500): void {
+  res.status(status)
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store')
+  if (status === 400) {
+    res.send('Bad Request')
+    return
+  }
+  if (status === 404) {
+    res.send('Not Found')
+    return
+  }
+  if (status === 429) {
+    res.send('Too Many Requests')
+    return
+  }
+  if (status === 405) {
+    res.send('Method Not Allowed')
+    return
+  }
+  res.send('Internal Server Error')
+}
+
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse,
+): Promise<void> {
+  if (req.method && req.method !== 'GET') {
+    sendError(res, 405)
+    return
   }
 
   const token = process.env.GITHUB_TOKEN
-  const username = new URL(req.url).searchParams.get('u') ?? undefined
-  const result = await buildAuthenticatedRecap(username, token)
+  const result = await buildAuthenticatedRecap(readQuery(req, 'u'), token)
 
-  if (result.status === 400) return errorResponse(400)
-  if (result.status === 404) return errorResponse(404)
-  if (result.status === 429) return errorResponse(429)
-  if (result.status !== 200) return errorResponse(404)
+  if (result.status === 400) {
+    sendError(res, 400)
+    return
+  }
+  if (result.status === 404) {
+    sendError(res, 404)
+    return
+  }
+  if (result.status === 429) {
+    sendError(res, 429)
+    return
+  }
+  if (result.status !== 200) {
+    sendError(res, 404)
+    return
+  }
 
   try {
     const avatarDataUri = await fetchAvatarDataUri(
@@ -52,19 +77,20 @@ export default async function handler(req: Request): Promise<Response> {
       token,
     )
     const element = buildShareCardElement(result.body, avatarDataUri)
-    const fonts = await loadShareFonts()
+    const buffer = await renderSharePng(element)
 
-    return new ImageResponse(element, {
-      width: SHARE_IMAGE_WIDTH,
-      height: SHARE_IMAGE_HEIGHT,
-      fonts,
-      headers: {
-        'Cache-Control': CACHE_OK,
-        Vary: 'Accept-Encoding',
-      },
-    })
+    if (token && buffer.toString('utf8').includes(token)) {
+      sendError(res, 404)
+      return
+    }
+
+    res.status(200)
+    res.setHeader('Content-Type', 'image/png')
+    res.setHeader('Cache-Control', CACHE_OK)
+    res.setHeader('Vary', 'Accept-Encoding')
+    res.send(buffer)
   } catch (error) {
     console.error('share-image failed', error)
-    return errorResponse(500)
+    sendError(res, 500)
   }
 }
