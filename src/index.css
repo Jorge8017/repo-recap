@@ -49,3 +49,24 @@ input:focus-visible {
   background: rgba(242, 196, 109, 0.35);
   color: #f4ede2;
 }
+
+@keyframes heatmap-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.heatmap-reveal {
+  clip-path: inset(0 100% 0 0);
+  animation: heatmap-reveal 900ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heatmap-reveal {
+    clip-path: inset(0 0 0 0);
+    animation: none;
+  }
+}

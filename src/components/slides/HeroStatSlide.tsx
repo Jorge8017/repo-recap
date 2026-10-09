@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { useFitText } from '../../hooks/useFitText'
 
 interface HeroStatSlideProps {
@@ -6,6 +6,7 @@ interface HeroStatSlideProps {
   value: string
   unit?: string
   details?: Array<{ label: string; value: string }>
+  children?: ReactNode
 }
 
 export function HeroStatSlide({
@@ -13,6 +14,7 @@ export function HeroStatSlide({
   value,
   unit,
   details,
+  children,
 }: HeroStatSlideProps) {
   const valueRef = useRef<HTMLSpanElement>(null)
   const valueSize = useFitText(valueRef, 96, 40)
@@ -61,6 +63,7 @@ export function HeroStatSlide({
           ))}
         </dl>
       ) : null}
+      {children}
     </div>
   )
 }

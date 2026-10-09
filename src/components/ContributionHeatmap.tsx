@@ -1,75 +1,26 @@
-import { motion } from 'framer-motion'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  FULL_WEEKS,
+  HEATMAP_LEVEL_COLORS,
+  HEATMAP_ROWS,
+  buildHeatmapModel,
+  chooseHeatmapWeekCount,
+  fitHeatmapCells,
+  spaceMonthLabels,
+} from '../lib/heatmap'
 import type { ContributionWeek } from '../types'
 
-const LEVEL_COLORS = ['#241510', '#6B2E18', '#C45A2A', '#E89A4A', '#F2C46D'] as const
-const COLS = 53
-const ROWS = 7
-const GAP = 2
-
-function intensityLevel(count: number, max: number): number {
-  if (count <= 0 || max <= 0) return 0
-  const ratio = count / max
-  if (ratio > 0.75) return 4
-  if (ratio > 0.5) return 3
-  if (ratio > 0.25) return 2
-  return 1
-}
-
-function buildGrid(weeks: ContributionWeek[]): Array<{
-  key: string
-  level: number
-  weekIndex: number
-  row: number
-}> {
-  const padded = weeks.slice(-COLS)
-  while (padded.length < COLS) {
-    padded.unshift({ contributionDays: [] })
-  }
-
-  let max = 0
-  for (const week of padded) {
-    for (const day of week.contributionDays) {
-      if (day.contributionCount > max) max = day.contributionCount
-    }
-  }
-
-  const cells: Array<{
-    key: string
-    level: number
-    weekIndex: number
-    row: number
-  }> = []
-
-  padded.forEach((week, weekIndex) => {
-    const byWeekday = new Map(
-      week.contributionDays.map((day) => [day.weekday, day]),
-    )
-    for (let row = 0; row < ROWS; row += 1) {
-      const day = byWeekday.get(row)
-      const count = day?.contributionCount ?? 0
-      cells.push({
-        key: day?.date ?? `empty-${weekIndex}-${row}`,
-        level: intensityLevel(count, max),
-        weekIndex,
-        row,
-      })
-    }
-  })
-
-  return cells
-}
-
-export function ContributionHeatmap({
-  weeks,
-  reducedMotion,
-}: {
+interface ContributionHeatmapProps {
   weeks: ContributionWeek[]
   reducedMotion: boolean
-}) {
+}
+
+export const ContributionHeatmap = memo(function ContributionHeatmap({
+  weeks,
+  reducedMotion,
+}: ContributionHeatmapProps) {
   const hostRef = useRef<HTMLDivElement>(null)
-  const [cell, setCell] = useState(4)
-  const cells = buildGrid(weeks)
+  const [width, setWidth] = useState(0)
 
   useLayoutEffect(() => {
     const node = hostRef.current
@@ -78,10 +29,8 @@ export function ContributionHeatmap({
     const update = () => {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
-        const width = node.clientWidth
-        if (width < 1) return
-        const next = Math.max(2, Math.floor((width - GAP * (COLS - 1)) / COLS))
-        setCell((prev) => (prev === next ? prev : next))
+        const next = node.clientWidth
+        setWidth((prev) => (prev === next ? prev : next))
       })
     }
     update()
@@ -93,45 +42,96 @@ export function ContributionHeatmap({
     }
   }, [])
 
-  const height = ROWS * cell + GAP * (ROWS - 1)
+  const weekCount = width > 0 ? chooseHeatmapWeekCount(width) : FULL_WEEKS
+  const layout = width > 0
+    ? fitHeatmapCells(width, weekCount)
+    : { cell: 0, gap: 2, fits: false }
+
+  const model = useMemo(
+    () => buildHeatmapModel(weeks, weekCount),
+    [weeks, weekCount],
+  )
+
+  const cell = layout.cell
+  const gap = layout.gap
+  const radius = cell * 0.25
+  const gridWidth = weekCount * cell + Math.max(0, weekCount - 1) * gap
+  const gridHeight = HEATMAP_ROWS * cell + (HEATMAP_ROWS - 1) * gap
+  const monthLabels = spaceMonthLabels(model.months, cell, gap)
+  const showMonths = width >= 360 && monthLabels.length > 0
 
   return (
-    <div ref={hostRef} className="mt-6 w-full min-w-0" aria-hidden="true">
-      <div
-        className="grid"
-        style={{
-          gridTemplateColumns: `repeat(${COLS}, ${cell}px)`,
-          gridTemplateRows: `repeat(${ROWS}, ${cell}px)`,
-          gap: GAP,
-          width: COLS * cell + GAP * (COLS - 1),
-          height,
-        }}
-      >
-        {cells.map((entry) => (
-          <motion.span
-            key={entry.key}
-            className="rounded-[2px]"
-            style={{
-              width: cell,
-              height: cell,
-              background: LEVEL_COLORS[entry.level],
-              gridColumn: entry.weekIndex + 1,
-              gridRow: entry.row + 1,
-            }}
-            initial={reducedMotion ? false : { opacity: 0, scale: 0.4 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={
-              reducedMotion
-                ? { duration: 0 }
-                : {
-                    delay: entry.weekIndex * 0.018,
-                    duration: 0.28,
-                    ease: [0.22, 1, 0.36, 1],
-                  }
-            }
-          />
-        ))}
+    <div
+      ref={hostRef}
+      className="mt-8 w-full min-w-0"
+      data-testid="contribution-heatmap"
+      aria-hidden="true"
+    >
+      {model.truncated ? (
+        <p className="mb-2 font-mono text-[11px] tracking-[0.08em] text-[#C9BFD6] uppercase">
+          Last 6 months
+        </p>
+      ) : null}
+
+      {cell > 0 ? (
+        <svg
+          width={gridWidth}
+          height={gridHeight}
+          viewBox={`0 0 ${gridWidth} ${gridHeight}`}
+          className={
+            reducedMotion
+              ? 'block max-w-full'
+              : 'heatmap-reveal block max-w-full'
+          }
+          role="presentation"
+        >
+          {model.cells.map((entry) => (
+            <rect
+              key={entry.date}
+              x={entry.weekIndex * (cell + gap)}
+              y={entry.row * (cell + gap)}
+              width={cell}
+              height={cell}
+              rx={radius}
+              ry={radius}
+              fill={HEATMAP_LEVEL_COLORS[entry.level]}
+            />
+          ))}
+        </svg>
+      ) : (
+        <div className="h-16" />
+      )}
+
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <div className="relative min-h-[14px] min-w-0 flex-1 overflow-hidden">
+          {showMonths
+            ? monthLabels.map((month) => (
+                <span
+                  key={`${month.label}-${month.weekIndex}`}
+                  className="absolute top-0 font-mono text-[11px] text-[#C9BFD6]"
+                  style={{ left: month.weekIndex * (cell + gap) }}
+                >
+                  {month.label}
+                </span>
+              ))
+            : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] text-[#C9BFD6]">
+          <span>Less</span>
+          {HEATMAP_LEVEL_COLORS.map((color) => (
+            <span
+              key={color}
+              className="inline-block rounded-[2px]"
+              style={{
+                width: Math.max(8, cell),
+                height: Math.max(8, cell),
+                background: color,
+              }}
+            />
+          ))}
+          <span>More</span>
+        </div>
       </div>
     </div>
   )
-}
+})

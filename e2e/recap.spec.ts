@@ -281,3 +281,45 @@ test.describe('long hero values', () => {
     )
   })
 })
+
+async function assertHeatmapInsideCard(page: Page) {
+  await mockRecapApi(page, fixture)
+  await page.goto('/u/octocat')
+  await expect(
+    page.getByRole('heading', { name: /your recap is ready/i }),
+  ).toBeVisible({ timeout: 15_000 })
+  await page.evaluate(() => document.fonts.ready)
+
+  await goToSlideWithText(page, 'Your last 12 months')
+  const heatmap = page.getByTestId('contribution-heatmap')
+  await expect(heatmap).toBeVisible()
+  await expect(heatmap.locator('svg')).toBeVisible()
+  await expect
+    .poll(async () => {
+      const box = await heatmap.boundingBox()
+      return box && box.width > 40 && box.height > 20
+    })
+    .toBeTruthy()
+
+  expectBoxInside(
+    await heatmap.boundingBox(),
+    await page.getByTestId('story-card').boundingBox(),
+  )
+}
+
+test.describe('contribution heatmap', () => {
+  test.use({
+    timezoneId: 'UTC',
+    reducedMotion: 'reduce',
+  })
+
+  test('fits inside the card at 1440px', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await assertHeatmapInsideCard(page)
+  })
+
+  test('fits inside the card at 390px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await assertHeatmapInsideCard(page)
+  })
+})

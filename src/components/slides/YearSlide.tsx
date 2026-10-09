@@ -51,11 +51,12 @@ export function YearSlide({ stats, reducedMotion }: SlideProps) {
         value={formatCount(total)}
         unit={unit}
         details={details}
-      />
-      <ContributionHeatmap
-        weeks={stats.contributionWeeks}
-        reducedMotion={reducedMotion}
-      />
+      >
+        <ContributionHeatmap
+          weeks={stats.contributionWeeks}
+          reducedMotion={reducedMotion}
+        />
+      </HeroStatSlide>
       <p className="sr-only">{summaryParts.join('. ')}.</p>
     </SlideShell>
   )
