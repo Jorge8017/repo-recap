@@ -67,8 +67,9 @@ When contribution data is present:
 
 ```bash
 npm install
-npm run dev        # Vite only — uses unauthenticated GitHub fallback
+npm run dev        # Vite only — skips /api/recap and uses unauthenticated GitHub
 npm run dev:api    # vercel dev — serves /api/recap with GITHUB_TOKEN
+# Optional: VITE_USE_API=true npm run dev  (requires a proxy that serves /api/recap)
 npm test
 npm run test:e2e
 npm run build

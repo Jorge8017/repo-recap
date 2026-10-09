@@ -20,7 +20,7 @@ describe('PersonalityIcon', () => {
       const html = renderToStaticMarkup(createElement(PersonalityIcon, { id, size: 24 }))
       expect(html).toContain('#F2C46D')
       expect(html).toContain('aria-hidden="true"')
-      expect(html).not.toMatch(/🌙|👻|🧬|🌅|✨|🔥|🧱/)
+      expect(html).not.toMatch(/🌙|👻|🧬|🌅|✨|🔥|🧱|🔍|🛰️|⏳/)
     }
   })
 

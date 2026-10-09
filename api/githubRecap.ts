@@ -295,6 +295,10 @@ export async function buildAuthenticatedRecap(
     return { status: 502, body: { error: 'upstream' } }
   }
 
+  if (graphql.user.login.toLowerCase() !== username.toLowerCase()) {
+    return { status: 502, body: { error: 'upstream' } }
+  }
+
   const eventsResult = await fetchPublicEvents(token, username)
   if (!eventsResult.ok) {
     if (eventsResult.status === 429) {
@@ -319,6 +323,7 @@ export async function buildAuthenticatedRecap(
     headers: {
       'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
       'Content-Type': 'application/json',
+      Vary: 'Accept-Encoding',
     },
   }
 }

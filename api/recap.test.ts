@@ -163,4 +163,99 @@ describe('buildAuthenticatedRecap', () => {
     expect(result.status).toBe(502)
     expect(result.body).toEqual({ error: 'upstream' })
   })
+
+  it('returns 400 when the username is missing', async () => {
+    const result = await buildAuthenticatedRecap(undefined, TOKEN)
+    expect(result.status).toBe(400)
+    expect(result.body).toEqual({ error: 'invalid_username' })
+  })
+
+  it('calls GitHub with each requested username and returns matching logins', async () => {
+    const graphqlLogins: string[] = []
+    const eventLogins: string[] = []
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+        const url = String(input)
+        if (url.includes('graphql')) {
+          const body = JSON.parse(String(init?.body ?? '{}')) as {
+            variables?: { login?: string }
+          }
+          const login = body.variables?.login ?? ''
+          graphqlLogins.push(login)
+          return jsonResponse({
+            data: {
+              user: {
+                login,
+                name: login,
+                avatarUrl: 'https://example.com/a.png',
+                createdAt: '2011-01-25T00:00:00Z',
+                followers: { totalCount: 1 },
+                repositories: { totalCount: 0, nodes: [] },
+                contributionsCollection: {
+                  totalCommitContributions: 0,
+                  totalPullRequestContributions: 0,
+                  totalIssueContributions: 0,
+                  totalPullRequestReviewContributions: 0,
+                  restrictedContributionsCount: 0,
+                  contributionCalendar: { totalContributions: 0, weeks: [] },
+                },
+              },
+            },
+          })
+        }
+
+        const match = url.match(/\/users\/([^/]+)\/events\/public/)
+        if (match?.[1]) eventLogins.push(decodeURIComponent(match[1]))
+        return jsonResponse([])
+      }),
+    )
+
+    const first = await buildAuthenticatedRecap('octocat', TOKEN)
+    const second = await buildAuthenticatedRecap('torvalds', TOKEN)
+
+    expect(graphqlLogins).toEqual(['octocat', 'torvalds'])
+    expect(eventLogins).toEqual(['octocat', 'torvalds'])
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(200)
+    if (first.status === 200) expect(first.body.user.login).toBe('octocat')
+    if (second.status === 200) expect(second.body.user.login).toBe('torvalds')
+    expect(first.headers?.Vary).toBe('Accept-Encoding')
+  })
+
+  it('returns 502 when GitHub login does not match the requested username', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        if (String(input).includes('graphql')) {
+          return jsonResponse({
+            data: {
+              user: {
+                login: 'gaearon',
+                name: 'Dan',
+                avatarUrl: 'https://example.com/a.png',
+                createdAt: '2011-01-25T00:00:00Z',
+                followers: { totalCount: 1 },
+                repositories: { totalCount: 0, nodes: [] },
+                contributionsCollection: {
+                  totalCommitContributions: 0,
+                  totalPullRequestContributions: 0,
+                  totalIssueContributions: 0,
+                  totalPullRequestReviewContributions: 0,
+                  restrictedContributionsCount: 0,
+                  contributionCalendar: { totalContributions: 0, weeks: [] },
+                },
+              },
+            },
+          })
+        }
+        return jsonResponse([])
+      }),
+    )
+
+    const result = await buildAuthenticatedRecap('jorge8017', TOKEN)
+    expect(result.status).toBe(502)
+    expect(result.body).toEqual({ error: 'upstream' })
+  })
 })

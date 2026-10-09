@@ -4,9 +4,16 @@ import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import {
   NETWORK_COPY,
   NOT_FOUND_COPY,
+  RATE_LIMIT_COPY,
   presentRecapError,
+  type ErrorIconId,
   type RecapErrorKind,
 } from '../lib/errorCopy'
+import {
+  ErrorHourglassIcon,
+  ErrorSatelliteIcon,
+  ErrorSearchIcon,
+} from './Icons'
 import { BrandLink } from './Logo'
 import { UiButton } from './UiButton'
 
@@ -16,6 +23,13 @@ interface ErrorStateProps {
   onRetry?: () => void
 }
 
+function ErrorGlyph({ icon }: { icon: ErrorIconId }) {
+  const props = { width: 96, height: 96, className: 'block' }
+  if (icon === 'search') return <ErrorSearchIcon {...props} />
+  if (icon === 'hourglass') return <ErrorHourglassIcon {...props} />
+  return <ErrorSatelliteIcon {...props} />
+}
+
 export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
   const reducedMotion = usePrefersReducedMotion()
   const copy =
@@ -23,7 +37,9 @@ export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
       ? NOT_FOUND_COPY
       : kind === 'network'
         ? NETWORK_COPY
-        : presentRecapError(error)
+        : kind === 'rate_limit'
+          ? RATE_LIMIT_COPY
+          : presentRecapError(error)
 
   return (
     <div
@@ -37,8 +53,8 @@ export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
         <BrandLink />
       </header>
       <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-end px-7 pt-10 pb-16 lg:justify-center">
-        <motion.span
-          className="mb-8 block text-[96px] leading-none"
+        <motion.div
+          className="mb-8"
           aria-hidden="true"
           animate={reducedMotion ? undefined : { y: [0, -12, 0] }}
           transition={
@@ -47,8 +63,8 @@ export function ErrorState({ error, kind, onRetry }: ErrorStateProps) {
               : { duration: 3.2, repeat: Infinity, ease: 'easeInOut' }
           }
         >
-          {copy.emoji}
-        </motion.span>
+          <ErrorGlyph icon={copy.icon} />
+        </motion.div>
         <p className="mb-3 font-mono text-[11px] tracking-[0.16em] text-[#F2C46D] uppercase">
           {copy.eyebrow}
         </p>

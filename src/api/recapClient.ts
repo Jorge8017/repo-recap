@@ -26,6 +26,17 @@ function parseResetAt(value: string | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
+export function shouldUseRecapApi(
+  env: { PROD?: boolean; VITE_USE_API?: string } = import.meta.env,
+): boolean {
+  return Boolean(env.PROD) || env.VITE_USE_API === 'true'
+}
+
+function isJsonResponse(response: Response): boolean {
+  const type = response.headers.get('content-type') ?? ''
+  return type.toLowerCase().includes('application/json')
+}
+
 export async function fetchRecapFromApi(
   username: string,
 ): Promise<CachedRecapPayload> {
@@ -40,11 +51,23 @@ export async function fetchRecapFromApi(
     )
   }
 
+  if (!isJsonResponse(response)) {
+    throw new RecapApiError(
+      'Recap API returned a non-JSON response.',
+      502,
+      'upstream',
+    )
+  }
+
   let body: unknown = null
   try {
     body = await response.json()
   } catch {
-    body = null
+    throw new RecapApiError(
+      'Recap API returned invalid JSON.',
+      502,
+      'upstream',
+    )
   }
 
   if (response.ok) {
@@ -82,11 +105,7 @@ export async function fetchRecapFromApi(
     )
   }
 
-  throw new RecapApiError(
-    'Upstream recap API failed.',
-    response.status,
-    code === 'upstream' ? 'upstream' : 'upstream',
-  )
+  throw new RecapApiError('Upstream recap API failed.', response.status, 'upstream')
 }
 
 export function shouldFallbackToDirectGitHub(error: unknown): boolean {

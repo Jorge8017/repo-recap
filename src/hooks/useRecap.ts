@@ -3,6 +3,7 @@ import { fetchRecapData, shouldRetryGitHubQuery } from '../api/github'
 import {
   fetchRecapFromApi,
   shouldFallbackToDirectGitHub,
+  shouldUseRecapApi,
 } from '../api/recapClient'
 import { readCache, writeCache } from '../lib/cache'
 import { assignPersonality } from '../lib/personality'
@@ -31,13 +32,15 @@ export async function loadRecap(username: string): Promise<RecapResult> {
     return assemble(cached)
   }
 
-  try {
-    const payload = await fetchRecapFromApi(username)
-    writeCache(key, payload)
-    return assemble(payload)
-  } catch (error) {
-    if (!shouldFallbackToDirectGitHub(error)) {
-      throw error
+  if (shouldUseRecapApi()) {
+    try {
+      const payload = await fetchRecapFromApi(username)
+      writeCache(key, payload)
+      return assemble(payload)
+    } catch (error) {
+      if (!shouldFallbackToDirectGitHub(error)) {
+        throw error
+      }
     }
   }
 
