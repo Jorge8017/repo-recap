@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { ApiRecapErrorBody } from '../src/types.js'
 import { fetchAvatarDataUri } from './_lib/avatarDataUri.js'
 import { buildAuthenticatedRecap } from './_lib/github.js'
 import { renderSharePng } from './_lib/renderSharePng.js'
@@ -19,27 +20,15 @@ function readQuery(req: VercelRequest, key: string): string | undefined {
   }
 }
 
-function sendError(res: VercelResponse, status: 400 | 404 | 429 | 405 | 500): void {
+function sendJsonError(
+  res: VercelResponse,
+  status: number,
+  body: ApiRecapErrorBody,
+): void {
   res.status(status)
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
   res.setHeader('Cache-Control', 'no-store')
-  if (status === 400) {
-    res.send('Bad Request')
-    return
-  }
-  if (status === 404) {
-    res.send('Not Found')
-    return
-  }
-  if (status === 429) {
-    res.send('Too Many Requests')
-    return
-  }
-  if (status === 405) {
-    res.send('Method Not Allowed')
-    return
-  }
-  res.send('Internal Server Error')
+  res.json(body)
 }
 
 export default async function handler(
@@ -47,27 +36,16 @@ export default async function handler(
   res: VercelResponse,
 ): Promise<void> {
   if (req.method && req.method !== 'GET') {
-    sendError(res, 405)
+    sendJsonError(res, 405, { error: 'upstream' })
     return
   }
 
   const token = process.env.GITHUB_TOKEN
   const result = await buildAuthenticatedRecap(readQuery(req, 'u'), token)
 
-  if (result.status === 400) {
-    sendError(res, 400)
-    return
-  }
-  if (result.status === 404) {
-    sendError(res, 404)
-    return
-  }
-  if (result.status === 429) {
-    sendError(res, 429)
-    return
-  }
   if (result.status !== 200) {
-    sendError(res, 404)
+    // Same JSON error contract as /api/recap (no user data).
+    sendJsonError(res, result.status, result.body)
     return
   }
 
@@ -80,7 +58,7 @@ export default async function handler(
     const buffer = await renderSharePng(element)
 
     if (token && buffer.toString('utf8').includes(token)) {
-      sendError(res, 404)
+      sendJsonError(res, 404, { error: 'not_found' })
       return
     }
 
@@ -91,6 +69,6 @@ export default async function handler(
     res.send(buffer)
   } catch (error) {
     console.error('share-image failed', error)
-    sendError(res, 500)
+    sendJsonError(res, 500, { error: 'upstream' })
   }
 }

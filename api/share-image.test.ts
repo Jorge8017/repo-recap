@@ -131,7 +131,7 @@ function mockRes() {
   const state: {
     statusCode: number
     headers: Record<string, string>
-    body: Buffer | string | null
+    body: Buffer | string | object | null
   } = { statusCode: 200, headers: {}, body: null }
 
   const res = {
@@ -144,6 +144,11 @@ function mockRes() {
       return res
     },
     send(body: Buffer | string) {
+      state.body = body
+      return res
+    },
+    json(body: object) {
+      state.headers['content-type'] = 'application/json; charset=utf-8'
       state.body = body
       return res
     },
@@ -241,12 +246,13 @@ describe('share-image handler', () => {
     await handler(mockReq({ u: '-bad' }), res)
 
     expect(state.statusCode).toBe(400)
-    expect(String(state.body)).toBe('Bad Request')
-    expect(String(state.body)).not.toContain(TOKEN)
-    expect(String(state.body)).not.toContain('-bad')
+    expect(state.headers['content-type']).toContain('application/json')
+    expect(state.body).toEqual({ error: 'invalid_username' })
+    expect(JSON.stringify(state.body)).not.toContain(TOKEN)
+    expect(JSON.stringify(state.body)).not.toContain('-bad')
   })
 
-  it('returns 404 for unknown user with no user data', async () => {
+  it('returns 404 JSON for unknown user with no user data', async () => {
     vi.mocked(buildAuthenticatedRecap).mockResolvedValue({
       status: 404,
       body: { error: 'not_found' },
@@ -256,12 +262,13 @@ describe('share-image handler', () => {
     await handler(mockReq({ u: 'missing-user' }), res)
 
     expect(state.statusCode).toBe(404)
-    expect(String(state.body)).toBe('Not Found')
-    expect(String(state.body)).not.toContain('missing-user')
-    expect(String(state.body)).not.toContain(TOKEN)
+    expect(state.headers['content-type']).toContain('application/json')
+    expect(state.body).toEqual({ error: 'not_found' })
+    expect(JSON.stringify(state.body)).not.toContain('missing-user')
+    expect(JSON.stringify(state.body)).not.toContain(TOKEN)
   })
 
-  it('returns 429 when rate limited with no user data', async () => {
+  it('returns 429 JSON when rate limited with no user data', async () => {
     vi.mocked(buildAuthenticatedRecap).mockResolvedValue({
       status: 429,
       body: { error: 'rate_limited', resetAt: '2026-10-09T12:00:00.000Z' },
@@ -271,9 +278,13 @@ describe('share-image handler', () => {
     await handler(mockReq({ u: 'octocat' }), res)
 
     expect(state.statusCode).toBe(429)
-    expect(String(state.body)).toBe('Too Many Requests')
-    expect(String(state.body)).not.toContain('octocat')
-    expect(String(state.body)).not.toContain(TOKEN)
+    expect(state.headers['content-type']).toContain('application/json')
+    expect(state.body).toEqual({
+      error: 'rate_limited',
+      resetAt: '2026-10-09T12:00:00.000Z',
+    })
+    expect(JSON.stringify(state.body)).not.toContain('octocat')
+    expect(JSON.stringify(state.body)).not.toContain(TOKEN)
   })
 
   it('renders Ghost Mode variant as a PNG', async () => {
