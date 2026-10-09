@@ -1,8 +1,7 @@
-import { useRef } from 'react'
-import { useFitText } from '../hooks/useFitText'
 import { LANGUAGE_BAR_COLORS } from '../lib/slideMeta'
 import { formatAccountAge, formatCount } from '../lib/stats'
 import type { Personality, RecapStats } from '../types'
+import { FittedText } from './FittedText'
 import { PersonalityIcon } from './PersonalityIcon'
 
 export const SHARE_CARD_WIDTH = 1080
@@ -30,8 +29,6 @@ export function ShareCard({
   const showDay = !ghostCard && Boolean(stats.busiestDay)
   const host = siteOrigin.replace(/^https?:\/\//, '')
   const initial = (stats.displayName.trim()[0] ?? stats.username[0] ?? '?').toUpperCase()
-  const titleRef = useRef<HTMLHeadingElement>(null)
-  useFitText(titleRef, 144, 56)
 
   return (
     <div
@@ -102,20 +99,18 @@ export function ShareCard({
         <div aria-hidden="true">
           <PersonalityIcon id={personality.id} size={144} />
         </div>
-        <h2
-          ref={titleRef}
+        <FittedText
+          text={personality.title}
+          maxSize={144}
+          minSize={56}
+          as="h2"
+          testId="share-card-title"
           className="min-w-0 max-w-full font-bold"
           style={{
-            display: 'inline-block',
-            maxWidth: '100%',
-            whiteSpace: 'nowrap',
-            fontSize: 144,
             lineHeight: 1,
             letterSpacing: '-0.04em',
           }}
-        >
-          {personality.title}
-        </h2>
+        />
         <p
           style={{
             fontSize: 38,

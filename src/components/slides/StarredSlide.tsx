@@ -1,12 +1,9 @@
-import { useRef } from 'react'
-import { useFitText } from '../../hooks/useFitText'
 import { CountUp } from '../CountUp'
+import { FittedText } from '../FittedText'
 import type { SlideProps } from '../../types'
 import { SlideShell } from './SlideShell'
 
 export function StarredSlide({ stats, reducedMotion }: SlideProps) {
-  const nameRef = useRef<HTMLHeadingElement>(null)
-  useFitText(nameRef, 64, 28, true)
   const repo = stats.mostStarredRepo
   if (!repo) return null
 
@@ -17,23 +14,20 @@ export function StarredSlide({ stats, reducedMotion }: SlideProps) {
       footer={repo.description ? <span>{repo.description}</span> : undefined}
     >
       <p className="mb-2 text-xl text-white/80">Most-starred repo</p>
-      <h2
-        ref={nameRef}
-        data-testid="starred-repo-name"
-        className="min-w-0 max-w-full font-bold tracking-[-0.02em] text-[#F4EDE2]"
-        style={{
-          display: 'inline-block',
-          maxWidth: '100%',
-          whiteSpace: 'nowrap',
-          fontSize: 64,
-        }}
-      >
-        {repo.name}
-      </h2>
+      <FittedText
+        text={repo.name}
+        maxSize={64}
+        minSize={28}
+        wrapAtMin
+        as="h2"
+        testId="starred-repo-name"
+        className="font-bold tracking-[-0.02em] text-[#F4EDE2]"
+      />
       <div className="mt-8 flex items-baseline gap-2">
         <CountUp
           value={repo.stars}
           reducedMotion={reducedMotion}
+          visitKey="starred"
           className="text-5xl font-bold text-[#fff3c9]"
         />
         <span className="text-xl text-white/75">stars</span>

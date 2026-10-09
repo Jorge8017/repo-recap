@@ -2,7 +2,7 @@ import * as htmlToImage from 'html-to-image'
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFitScale } from '../../hooks/useFitScale'
-import { useFitText } from '../../hooks/useFitText'
+import { FittedText } from '../FittedText'
 import {
   assertPngBlob,
   downloadPngBlob,
@@ -45,8 +45,6 @@ export function SummarySlide({
 }: SlideProps & { onReplay: () => void; slideCount?: number }) {
   const navigate = useNavigate()
   const exportRef = useRef<HTMLDivElement>(null)
-  const nameRef = useRef<HTMLSpanElement>(null)
-  useFitText(nameRef, 52, 24)
   const { ref: previewHostRef, scale } = useFitScale(
     SHARE_CARD_WIDTH,
     SHARE_CARD_HEIGHT,
@@ -229,18 +227,13 @@ export function SummarySlide({
             <span className="block text-[clamp(2rem,5vh,3.25rem)] leading-[1.02]">
               That&apos;s a wrap,
             </span>
-            <span
-              ref={nameRef}
+            <FittedText
+              text={`${stats.displayName}.`}
+              maxSize={52}
+              minSize={24}
+              testId="summary-heading-name"
               className="block leading-[1.02]"
-              style={{
-                display: 'inline-block',
-                maxWidth: '100%',
-                whiteSpace: 'nowrap',
-                fontSize: 52,
-              }}
-            >
-              {stats.displayName}.
-            </span>
+            />
           </h1>
           <p className="hidden text-[15px] leading-relaxed text-[#C9BFD6] lg:block lg:text-base">
             Download your card as a 1080 × 1350 image, perfect for LinkedIn,

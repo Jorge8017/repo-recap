@@ -102,22 +102,27 @@ export type FitTextOnceResult = {
   ready: boolean
   /** Pixel width of the final value at the fitted size. */
   reservedWidth: number
+  /** True when wrapAtMin kicked in because the final value still overflows. */
+  wrap: boolean
 }
 
 /**
  * Fit font size from a dedicated sizer that holds the FINAL value only.
  * Waits for document.fonts before the first committed size so the visible
- * hero never flashes maxSize then snaps. Remeasures only on width/contentKey.
+ * hero never flashes maxSize then snaps. Measures once per contentKey once
+ * the parent has a real width.
  */
 export function useFitTextOnce(
   ref: RefObject<HTMLElement | null>,
   contentKey: string,
   maxSize: number,
   minSize: number,
+  wrapAtMin = false,
 ): FitTextOnceResult {
   const [size, setSize] = useState(maxSize)
   const [ready, setReady] = useState(false)
   const [reservedWidth, setReservedWidth] = useState(0)
+  const [wrap, setWrap] = useState(false)
 
   useLayoutEffect(() => {
     const el = ref.current
@@ -128,6 +133,7 @@ export function useFitTextOnce(
     let cancelled = false
     let observer: ResizeObserver | null = null
     setReady(false)
+    setWrap(false)
 
     const measure = (): boolean => {
       if (cancelled) return false
@@ -135,13 +141,26 @@ export function useFitTextOnce(
       // Parent is often 0 on the first layout pass; wait for a real width.
       if (parentWidth < 8) return false
 
+      el.style.display = 'inline-block'
+      el.style.maxWidth = '100%'
+      el.style.whiteSpace = 'nowrap'
+      el.style.overflowWrap = 'normal'
       el.style.fontSize = `${maxSize}px`
       const next = Math.round(
         fitTextSize(maxSize, minSize, parentWidth, el.scrollWidth),
       )
       el.style.fontSize = `${next}px`
+
+      let nextWrap = false
+      if (wrapAtMin && next <= minSize && el.scrollWidth > parentWidth) {
+        el.style.whiteSpace = 'normal'
+        el.style.overflowWrap = 'anywhere'
+        nextWrap = true
+      }
+
       setSize(next)
-      setReservedWidth(Math.ceil(el.scrollWidth))
+      setWrap(nextWrap)
+      setReservedWidth(nextWrap ? 0 : Math.ceil(el.scrollWidth))
       setReady(true)
       observer?.disconnect()
       observer = null
@@ -168,7 +187,7 @@ export function useFitTextOnce(
       cancelled = true
       observer?.disconnect()
     }
-  }, [contentKey, maxSize, minSize, ref])
+  }, [contentKey, maxSize, minSize, ref, wrapAtMin])
 
-  return { size, ready, reservedWidth }
+  return { size, ready, reservedWidth, wrap }
 }
